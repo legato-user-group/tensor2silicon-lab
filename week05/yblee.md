@@ -85,7 +85,7 @@ flowchart LR
 이번 주 공동 활동과 설명 전체에서 기준점으로 삼을 작업은 선형 계층 뒤에 ReLU 활성화를 붙인 추론 연산이다.
 
 $$
-Y = \operatorname{ReLU}(XW + b), \qquad \operatorname{ReLU}(z) = \max(0, z)
+Y = ReLU(XW + b), \qquad  ReLU(z) = \max(0, z)
 $$
 
 먼저 입력 128개를 한 묶음(batch)으로 처리하는 경우(`M = 128`)를 살펴보고 이어서 입력 1개만 즉시 처리하는 경우(`M = 1`)와 비교한다. 가중치 `W`와 편향 `b`는 학습이 끝난 고정 값이다.
