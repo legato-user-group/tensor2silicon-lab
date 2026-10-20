@@ -144,7 +144,7 @@ T2S Lab은 단순 출석이 아닌 **모든 구성원의 직접 기여와 교차
 - **연구개발과제명 (국문)**: 지속적 AI반도체 성능 최적화를 위한 AI 생태계 적응형 시스템SW 기술 개발
 - **Project Title (EN)**: *Development of Adaptive System Software Technology for AI Ecosystems Enabling Continuous Performance Optimization of AI Semiconductors*
 - **연구개발기간 (Period)**: 2026.04.01 ~ 2030.12.31
-- **참여기관 (Consortium)**: ㈜하이퍼엑셀(주관), ㈜스퀴즈비츠(공동), 서울대학교 산학협력단(공동), 한국과학기술원(공동), 모두의연구소(위탁)
+- **참여기관 (Consortium)**: ㈜하이퍼엑셀(주관), 서울대학교 산학협력단(공동), 한국과학기술원(공동), 모두의연구소(위탁)
 
 > *This work was supported by the Institute of Information & Communications Technology Planning & Evaluation (IITP) grant funded by the Korea government (MSIT) (No. RS-2026-25521385, Development of Adaptive System Software Technology for AI Ecosystems Enabling Continuous Performance Optimization of AI Semiconductors).*
 
