@@ -163,7 +163,7 @@ $$
 
 ## 3. 블록 단위 프로그래밍 모델 — 스레드가 아니라 블록으로 생각하기
 
-### 3.1 CUDA는 스레드 하나의 일을 적는다
+### 3.1 CUDA의 SIMT 커널은 스레드 하나의 일을 적는다
 
 CUDA에서 커널을 시작하면 수많은 스레드가 같은 코드를 실행한다. 스레드는 thread block으로 묶이고 thread block은 grid로 묶인다. 각 스레드는 내장 변수로 자신의 위치를 알아내고 그 위치에 해당하는 데이터를 처리한다. [CUDA Programming Model의 Thread Blocks and Grids](https://docs.nvidia.com/cuda/cuda-programming-guide/01-introduction/programming-model.html#thread-blocks-and-grids)
 
@@ -275,8 +275,6 @@ NVIDIA GPU에서 Triton 프로그램 인스턴스 하나는 CUDA thread block �
 
 1024개 원소를 128개 스레드가 처리하므로 스레드 하나가 평균 8개 원소를 맡는다. 어떤 스레드가 어느 원소를 맡을지는 컴파일러가 정한다. 개발자가 `BLOCK_SIZE`를 바꿔도 스레드 수가 따라서 바뀌는 것은 아니다.
 
-확인 질문: `N = 10`, `BLOCK_SIZE = 8`이면 `grid`는 얼마이고 마지막 인스턴스에서 마스킹되는 위치는 몇 개일까?
-
 ---
 
 ## 4. 포인터 연산과 마스킹 — 나누어떨어지지 않는 마지막 블록
@@ -301,7 +299,6 @@ x = tl.load(x_ptr + offsets, mask=mask)                 # 포인터 블록을 �
 ```
 
 `tl.arange(0, BLOCK_SIZE)`는 `[0, 1, ..., BLOCK_SIZE−1]` 정수 블록이다. 여기에 시작 위치를 더한 `offsets`를 시작 포인터에 더하면 **포인터 블록**이 된다. 포인터에 정수를 더하면 C와 같이 **원소 단위**로 주소가 이동한다.
-
 $$
 \text{주소}(x\_ptr + k) = \text{시작 주소} + k \times 4\ \mathrm{Byte}\qquad(\text{FP32})
 $$
@@ -349,9 +346,7 @@ mask 없이 `tl.load(x_ptr + offsets)`를 쓰면 마지막 인스턴스가 배�
 | 2의 거듭제곱 | [`tl.arange`](https://triton-lang.org/main/python-api/generated/triton.language.arange.html) 문서는 `end`가 2의 거듭제곱이어야 한다고 적는다. Tutorial 02도 블록의 원소 수가 2의 거듭제곱이어야 한다는 제약을 밝힌다 |
 | 블록 크기 상한 | 같은 문서에 따르면 `end − start`는 `TRITON_MAX_TENSOR_NUMEL = 1,048,576` 이하 |
 
-`n_elements`는 실행할 때마다 바뀌어도 되는 일반 인자다. 바뀌는 것은 마지막 블록의 mask뿐이며 블록의 shape는 그대로다.
-
-확인 질문: `BLOCK_SIZE=1000`으로 호출하면 어떤 일이 일어날까? 길이 1000짜리 구간을 처리하고 싶다면 어떻게 바꿔야 할까?
+n_elements가 바뀌면 인스턴스 수와 마지막 블록의 mask가 바뀐다. 블록의 shape는 그대로다. 값마다 다시 컴파일하지는 않지만, 16의 배수인지 같은 값의 성질이 바뀌면 다시 컴파일될 수 있다.
 
 ---
 
@@ -375,9 +370,7 @@ $$
 | `T_memory = Q/BW` | 약 201.327 μs |
 | `T_ideal` | **약 201.327 μs** |
 
-I가 분기점 20 FLOP/Byte보다 훨씬 작으므로 메모리 시간이 기준이다. PyTorch의 `x + y`도 이미 한 커널에서 입력 두 개를 읽고 출력 하나를 쓴다. Triton으로 다시 써도 Q가 줄지 않으므로 이상적 시간도 같다. Tutorial 01 문서에 실린 표에서도 크기 16,777,216에서 두 구현의 GB/s가 같게 기록되어 있다(문서 확인. 측정 GPU는 페이지에 적혀 있지 않다).
-
-Tutorial 02의 Motivations 절도 원소별 덧셈 커널은 교육적 가치는 있지만 실제로는 큰 이득을 주지 않는다는 말로 시작한다.
+I가 분기점 20 FLOP/Byte보다 훨씬 작으므로 메모리 시간이 기준이다. PyTorch의 `x + y`도 이미 한 커널에서 입력 두 개를 읽고 출력 하나를 쓴다. Triton으로 다시 써도 Q가 줄지 않으므로 이상적 시간도 같다. 
 
 ### 5.2 결합할 연산이 생기면 줄일 이동량도 생긴다
 
