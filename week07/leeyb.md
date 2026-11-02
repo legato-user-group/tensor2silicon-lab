@@ -32,7 +32,7 @@
 본격적인 수식과 코드에 들어가기 전에, 이번 7주차가 답하려는 두 가지 질문을 일상적인 비유로 먼저 잡아 보자.
 
 1. **알고리즘·메모리 관점 (3~6절) — “어떻게 타일 단위로 데이터를 재사용해 느린 HBM 왕복을 줄일까?”**
-   거대한 두 행렬 $A$와 $B$를 곱해 $C$를 만들 때, 계산할 때마다 멀리 있는 대형 창고(**HBM**)에서 숫자를 하나씩 가져오면 길 위에서 시간을 다 쓴다. 그래서 결과 행렬 $C$를 네모난 바둑판 조각(**출력 타일, `[BM, BN]`**)으로 나누고, 각 일꾼(**프로그램 인스턴스 `pid`**)에게 출력 타일 하나씩을 맡긴다. 일꾼은 작은 작업대(**온칩 Shared Memory·레지스터**) 위에 입력 조각(`a`, `b` 타일)을 올려두고 수십~수백 번 재사용하며 곱셈·덧셈을 누적한다. 여기에 더해, 이웃한 일꾼들이 **정사각형 모양으로 모여 일하게 순서를 조정(`GROUP_SIZE_M`)**하면 칩 전체가 공유하는 중간 창고(**L2 캐시**)까지 함께 재사용할 수 있다.
+   거대한 두 행렬 `A`와 `B`를 곱해 `C`를 만들 때, 계산할 때마다 멀리 있는 대형 창고(**HBM**)에서 숫자를 하나씩 가져오면 길 위에서 시간을 다 쓴다. 그래서 결과 행렬 `C`를 네모난 바둑판 조각(**출력 타일, `[BM, BN]`**)으로 나누고, 각 일꾼(**프로그램 인스턴스 `pid`**)에게 출력 타일 하나씩을 맡긴다. 일꾼은 작은 작업대(**온칩 Shared Memory·레지스터**) 위에 입력 조각(`a`, `b` 타일)을 올려두고 수십~수백 번 재사용하며 곱셈·덧셈을 누적한다. 여기에 더해, 이웃한 일꾼들이 **정사각형 모양으로 모여 일하게 순서를 조정(`GROUP_SIZE_M`)**하면 칩 전체가 공유하는 중간 창고(**L2 캐시**)까지 함께 재사용할 수 있다.
 2. **컴파일러 관점 (7~8절) — “파이썬으로 짠 블록 코드는 어떻게 GPU 기계어로 번역될까?”**
    우리는 파이썬 커널 안에서 `a = tl.load(...)`, `accumulator = tl.dot(a, b, accumulator)`처럼 **“타일 통째로 읽어서 곱해라”**라고만 적는다. 하지만 실제 GPU 하드웨어는 수백 개의 스레드(워프)가 각자 어느 주소를 읽고, Shared Memory 어느 칸에 잠시 담아 두고, 어떤 Tensor Core 명령(`mma.sync`)을 실행할지까지 세세하게 지정해 주어야 움직인다. Triton 컴파일러는 이 거대한 간극을 한 번에 뛰어넘지 않고, **추상적인 블록 설계도(`TTIR`) → GPU 워프·메모리 분담 도면(`TTGIR`) → 스레드별 주소·어셈블리(`LLVM IR` / `PTX`) → 실제 기계어(`CUBIN`)**의 여러 징검다리(MLIR)를 건너며 차례대로 구체화한다.
 
@@ -40,7 +40,7 @@
 
 지난 주차들에서 배운 조각들이 이번 주 코드에서 어떻게 하나로 합쳐지는지 연결해 보자.
 
-4주차에는 행렬곱 $C = A \times B$에서 입력 타일을 온칩 메모리에 올려 재사용하면 HBM 이동량 $Q$가 줄어들고 산술 강도 $I = F/Q$가 높아져 Roofline의 연산 병목(Compute-bound) 구간으로 이동한다는 것을 손으로 계산했다. 6주차에는 Triton에서 스레드가 아니라 블록(`BLOCK_SIZE`) 단위로 주소를 만들고(`pid`, `offsets`, `mask`), 중간 결과를 온칩에 유지한 채 여러 연산을 이어서 수행하면(`Fused Softmax`) HBM 왕복이 사라진다는 것을 확인했다.
+4주차에는 행렬곱 `C = A @ B`에서 입력 타일을 온칩 메모리에 올려 재사용하면 HBM 이동량 `Q`가 줄어들고 산술 강도 `I = F / Q`가 높아져 Roofline의 연산 병목(Compute-bound) 구간으로 이동한다는 것을 손으로 계산했다. 6주차에는 Triton에서 스레드가 아니라 블록(`BLOCK_SIZE`) 단위로 주소를 만들고(`pid`, `offsets`, `mask`), 중간 결과를 온칩에 유지한 채 여러 연산을 이어서 수행하면(`Fused Softmax`) HBM 왕복이 사라진다는 것을 확인했다.
 
 이번 7주차에는 이 두 갈래를 하나로 합친다. 첫째, 4주차에 수식으로만 적었던 `[BLOCK_SIZE_M, BLOCK_SIZE_N]` 출력 타일과 `BLOCK_SIZE_K` 누적 루프를 **2차원 포인터 블록과 `tl.dot`을 사용하는 실제 Triton 코드([Tutorial 03: Matrix Multiplication](https://triton-lang.org/main/getting-started/tutorials/03-matrix-multiplication.html))**에서 확인한다. 둘째, 6주차에 “첫 호출에서 JIT 컴파일이 일어난다”고만 불렀던 `@triton.jit` 내부를 열어, **블록 단위 Python 코드가 어떤 중간 표현(IR) 단계들을 거쳐 Shared Memory 배치, 비동기 복사, Tensor Core 명령을 갖춘 GPU 기계어(`CUBIN`)로 바뀌는지** 추적한다.
 
@@ -117,18 +117,18 @@ flowchart LR
 
 ### 2.1 수학적 정의와 기본 자료형 (FP16 입력·출력, FP32 누산)
 
-공통 연산은 `[M, K]` 행렬 $A$와 `[K, N]` 행렬 $B$를 곱해 `[M, N]` 행렬 $C$를 만드는 2차원 행렬곱(GEMM)이다.
+공통 연산은 `[M, K]` 행렬 `A`와 `[K, N]` 행렬 `B`를 곱해 `[M, N]` 행렬 `C`를 만드는 2차원 행렬곱(GEMM)이다.
 
 $$
 C_{i, j} = \sum_{k=0}^{K-1} A_{i, k} \cdot B_{k, j} \qquad (0 \le i < M,\ 0 \le j < N)
 $$
 
 이 식을 풀어서 읽으면 다음과 같다.
-- 결과 행렬 $C$의 $(i, j)$ 칸 원소 하나를 구하려면, $A$의 $i$번째 가로줄(길이 $K$)과 $B$의 $j$번째 세로줄(길이 $K$)에서 같은 위치의 원소끼리 곱한($A_{i,k} \cdot B_{k,j}$, 곱셈 $K$번) 뒤 그 값들을 전부 더해야(덧셈·누산 $K$번) 한다.
-- 즉, 출력 원소 하나당 $2K\ \text{FLOPs}$가 필요하고, 결과 행렬 $C$ 전체에는 총 $M \times N$개의 칸이 있으므로 전체 부동소수점 연산량 $F$는 타일 크기나 실행 순서와 무관하게 항상 다음과 같다.
+- 결과 행렬 `C`의 `(i, j)` 칸 원소 하나를 구하려면, `A`의 `i`번째 가로줄(길이 `K`)과 `B`의 `j`번째 세로줄(길이 `K`)에서 같은 위치의 원소끼리 곱한(`A[i, k] × B[k, j]`, 곱셈 `K`번) 뒤 그 값들을 전부 더해야(덧셈·누산 `K`번) 한다.
+- 즉, 출력 원소 하나당 `2K FLOPs`가 필요하고, 결과 행렬 `C` 전체에는 총 `M × N`개의 칸이 있으므로 전체 부동소수점 연산량 `F`는 타일 크기나 실행 순서와 무관하게 항상 다음과 같다.
 
 $$
-F = 2 \times M \times N \times K\ \text{FLOPs}
+F = 2 \times M \times N \times K\ \mathrm{FLOPs}
 $$
 
 4주차에는 계산을 단순화하기 위해 모든 텐서를 FP32(4 Byte)로 통일했지만, 이번 7주차에는 **실제 딥러닝 가속기와 Tutorial 03의 기본 설정**을 그대로 따라 **혼합 정밀도(Mixed Precision)** 자료형을 사용한다. 왜 굳이 두 가지 자료형을 섞어 쓸까?
@@ -161,25 +161,24 @@ $$
 6절(계산 예제 2)과 12~13절(연습문제 2)에서는 3·4·6주차와 같은 형태의 이상적 시간 모형과 Roofline 식을 사용한다.
 
 - **가상 하드웨어 사양 (교육용 가상 조건):**
-  - FP16 입력 · FP32 누산 행렬 연산(Tensor Core류 경로) 피크 성능: $P = 80 \times 10^{12}\ \text{FLOPs/s}$ (**80 TFLOPs/s**)
-  - HBM 대역폭: $\mathrm{BW} = 1 \times 10^{12}\ \text{Byte/s}$ (**1 TB/s**)
-  - Roofline 분기점(Ridge Point):
-    $$
-    I_{\mathrm{ridge}} = \frac{P}{\mathrm{BW}} = \frac{80 \times 10^{12}}{1 \times 10^{12}} = \mathbf{80\ \mathrm{FLOP/Byte}}
-    $$
-    *(해석: HBM에서 데이터 1 Byte를 읽어올 때마다 최소 80번 이상의 부동소수점 연산을 수행해야 메모리 통로가 아닌 연산기 성능($P$)을 끝까지 끌어낼 수 있다는 뜻이다.)*
+  - FP16 입력 · FP32 누산 행렬 연산(Tensor Core류 경로) 피크 성능: `P = 80 × 10¹² FLOPs/s` (**80 TFLOPs/s**)
+  - HBM 대역폭: `BW = 1 × 10¹² Byte/s` (**1 TB/s**)
+  - Roofline 분기점(Ridge Point): `I_ridge = P / BW = (80 × 10¹²) / (1 × 10¹²) =` **`80 FLOP/Byte`**
+    *(해석: HBM에서 데이터 1 Byte를 읽어올 때마다 최소 80번 이상의 부동소수점 연산을 수행해야 메모리 통로가 아닌 연산기 성능 `P`를 끝까지 끌어낼 수 있다는 뜻이다.)*
 - **공통 가정과 제외한 비용:**
   - 입력 텐서 `A`, `B`는 이미 장치의 HBM에 올라와 있고, 출력 `C`는 K 루프가 끝난 뒤 한 번만 HBM에 기록한다.
   - HBM 이동량의 기준선(상한)을 구할 때는 4주차와 동일하게 **“한 출력 타일(`BM × BN`) 안에서만 입력을 온칩 재사용하고, 서로 다른 출력 타일 사이의 L2 캐시 재사용은 없다”**고 가정한다.
-  - 호스트(CPU)↔장치 전송 시간, 커널 시작 오버헤드, `@triton.jit` 컴파일 시간과 `@triton.autotune` 탐색 시간은 단일 커널의 이상적 실행시간 $T_{\mathrm{ideal}}$ 계산에 포함하지 않는다(오토튜닝 탐색 시간을 포함한 전체 호출 손익분기점은 연습문제 3에서 별도로 다룬다).
-  - 단위 변환: 용량 표기 중 이진 단위는 $1\ \text{KiB} = 1024\ \text{Byte}$, 십진 단위는 $1\ \text{GB} = 10^9\ \text{Byte}$, $1\ \text{TB} = 10^{12}\ \text{Byte}$를 사용한다.
+  - 호스트(CPU)↔장치 전송 시간, 커널 시작 오버헤드, `@triton.jit` 컴파일 시간과 `@triton.autotune` 탐색 시간은 단일 커널의 이상적 실행시간 `T_ideal` 계산에 포함하지 않는다(오토튜닝 탐색 시간을 포함한 전체 호출 손익분기점은 연습문제 3에서 별도로 다룬다).
+  - 단위 변환: 용량 표기 중 이진 단위는 `1 KiB = 1024 Byte`, 십진 단위는 `1 GB = 10⁹ Byte`, `1 TB = 10¹² Byte`를 사용한다.
 - **시간 및 Roofline 성능 상한 식:**
-  $$
-  T_{\mathrm{compute}} = \frac{F}{P}, \qquad T_{\mathrm{memory}} = \frac{Q}{\mathrm{BW}}, \qquad T_{\mathrm{ideal}} = \max\!\left(T_{\mathrm{compute}},\ T_{\mathrm{memory}}\right)
-  $$
-  $$
-  I = \frac{F}{Q}, \qquad R_{\mathrm{roof}}(I) = \min\!\left(P,\ \mathrm{BW} \times I\right)
-  $$
+
+$$
+T_{\mathrm{compute}} = \frac{F}{P}, \qquad T_{\mathrm{memory}} = \frac{Q}{\mathrm{BW}}, \qquad T_{\mathrm{ideal}} = \max\!\left(T_{\mathrm{compute}},\ T_{\mathrm{memory}}\right)
+$$
+
+$$
+I = \frac{F}{Q}, \qquad R_{\mathrm{roof}}(I) = \min\!\left(P,\ \mathrm{BW} \times I\right)
+$$
 
 ---
 
@@ -207,10 +206,10 @@ for m in range(0, M, BLOCK_SIZE_M):
 
 이 의사코드에서 **바깥쪽 두 루프(`for m`, `for n`)와 안쪽 루프(`for k`)의 역할 차이**를 구분하는 것이 출발점이다.
 
-- **바깥쪽 `(m, n)` 루프 → 병렬 실행 그리드(`grid`)로 펼쳐진다:** 서로 다른 출력 타일 `C[m:m+BM, n:n+BN]`은 각자 자기만의 누산기 `acc`를 계산해 자기 자리에 쓸 뿐, 다른 출력 타일의 계산 결과를 기다릴 필요가 없다. 따라서 Triton에서는 바깥쪽 두 루프를 `for` 문으로 돌지 않고, $\mathrm{cdiv}(M, \mathrm{BM}) \times \mathrm{cdiv}(N, \mathrm{BN})$개의 **프로그램 인스턴스(`pid`)**에게 출력 타일 하나씩을 전담시킨다.
+- **바깥쪽 `(m, n)` 루프 → 병렬 실행 그리드(`grid`)로 펼쳐진다:** 서로 다른 출력 타일 `C[m:m+BM, n:n+BN]`은 각자 자기만의 누산기 `acc`를 계산해 자기 자리에 쓸 뿐, 다른 출력 타일의 계산 결과를 기다릴 필요가 없다. 따라서 Triton에서는 바깥쪽 두 루프를 `for` 문으로 돌지 않고, `cdiv(M, BM) × cdiv(N, BN)`개의 **프로그램 인스턴스(`pid`)**에게 출력 타일 하나씩을 전담시킨다.
 - **안쪽 `k` 루프 → 각 프로그램 인스턴스 내부의 `for k` 루프로 남는다:** 출력 타일 하나를 완성하려면 `A`의 가로 띠(`[BM, K]`)와 `B`의 세로 띠(`[K, BN]`)를 `BLOCK_SIZE_K`(줄여서 `BK`) 폭씩 잘라 곱한 뒤 같은 `acc`에 차례대로 더해야 한다. 따라서 `k` 방향만 커널 함수 안의 순차 루프로 돈다.
 
-눈으로 모양을 확인해 보자. 일꾼 하나가 출력 행렬 $C$의 `(pid_m, pid_n)` 타일 하나를 완성하기 위해 $A$와 $B$에서 어떤 조각들을 차례로 읽어 오는지 그리면 다음과 같다.
+눈으로 모양을 확인해 보자. 일꾼 하나가 출력 행렬 `C`의 `(pid_m, pid_n)` 타일 하나를 완성하기 위해 `A`와 `B`에서 어떤 조각들을 차례로 읽어 오는지 그리면 다음과 같다.
 
 ```text
           행렬 B [K, N]
@@ -233,7 +232,7 @@ for m in range(0, M, BLOCK_SIZE_M):
  (k=0)(k=1)(k=2)
 ```
 
-위 그림처럼 `pid` 하나는 **`C` 타일 자리에는 가만히 서서**, $A$에서는 **오른쪽으로(`k = 0 → 1 → 2`)** 창문을 밀고, $B$에서는 **아래쪽으로(`k = 0 → 1 → 2`)** 창문을 밀면서 작은 타일 쌍 $(a_0, b_0), (a_1, b_1), (a_2, b_2)$를 차례로 가져와 곱한 뒤 자기 수첩(`acc`)에 차곡차곡 더한다.
+위 그림처럼 `pid` 하나는 **`C` 타일 자리에는 가만히 서서**, `A`에서는 **오른쪽으로(`k = 0 → 1 → 2`)** 창문을 밀고, `B`에서는 **아래쪽으로(`k = 0 → 1 → 2`)** 창문을 밀면서 작은 타일 쌍 `(a_0, b_0)`, `(a_1, b_1)`, `(a_2, b_2)`를 차례로 가져와 곱한 뒤 자기 수첩(`acc`)에 차곡차곡 더한다.
 
 ```mermaid
 flowchart LR
@@ -262,15 +261,15 @@ flowchart LR
 
 6주차의 `Vector Add`에서는 1차원 오프셋 블록 `offsets = pid * BLOCK_SIZE + tl.arange(0, BLOCK_SIZE)`를 시작 포인터에 더해 1차원 포인터 블록을 만들었다. 그렇다면 2차원 행렬 `X`에서 네모난 타일 구간 `X[i_start:i_end, j_start:j_end]`의 주소 블록은 어떻게 만들까?
 
-먼저 컴퓨터 메모리는 실제로는 1차원 긴 줄이라는 점을 떠올려 보자. 2차원 텐서 `X`에서 행 번호가 $i$, 열 번호가 $j$인 원소 `X[i, j]`가 시작 주소 `x_ptr`로부터 몇 칸 떨어져 있는지는 **스트라이드(stride, 보폭)**로 계산한다.
+먼저 컴퓨터 메모리는 실제로는 1차원 긴 줄이라는 점을 떠올려 보자. 2차원 텐서 `X`에서 행 번호가 `i`, 열 번호가 `j`인 원소 `X[i, j]`가 시작 주소 `x_ptr`로부터 몇 칸 떨어져 있는지는 **스트라이드(stride, 보폭)**로 계산한다.
 
-$$
-\mathrm{addr}(X[i, j]) = \text{x\_ptr} + i \times \text{stride\_xi} + j \times \text{stride\_xj}
-$$
+```text
+addr(X[i, j]) = x_ptr + i * stride_xi + j * stride_xj
+```
 
 - `stride_xi`(`X.stride(0)`): **아래로 한 행 내려갈 때** 메모리에서 건너뛰어야 하는 원소 수다.
 - `stride_xj`(`X.stride(1)`): **오른쪽으로 한 열 이동할 때** 메모리에서 건너뛰어야 하는 원소 수다.
-- 예를 들어 가로 길이가 $K=5$인 일반적인 행 우선(Row-major) 행렬 `A[M, 5]`라면, 한 행 아래로 내려갈 때 다섯 칸을 건너뛰므로 `stride_am = 5`이고, 바로 옆 열로 갈 때는 한 칸만 가면 되므로 `stride_ak = 1`이다.
+- 예를 들어 가로 길이가 `K = 5`인 일반적인 행 우선(Row-major) 행렬 `A[M, 5]`라면, 한 행 아래로 내려갈 때 다섯 칸을 건너뛰므로 `stride_am = 5`이고, 바로 옆 열로 갈 때는 한 칸만 가면 되므로 `stride_ak = 1`이다.
 
 Triton에서 `[BM, BK]` 크기의 2차원 주소 바둑판을 만들 때는, 1차원 행 인덱스 줄 `offs_am`(길이 `BM`)과 1차원 열 인덱스 줄 `offs_k`(길이 `BK`)에 **`None`(빈 차원 하나 끼워 넣기) 인덱싱과 브로드캐스팅**을 적용한다.
 
@@ -357,7 +356,7 @@ for k in range(0, tl.cdiv(K, BLOCK_SIZE_K)):
     b_ptrs += BLOCK_SIZE_K * stride_bk
 ```
 
-여기서 [`tl.dot(input, other, acc=None, ...)`](https://triton-lang.org/main/python-api/generated/triton.language.dot.html)은 두 2차원(또는 3차원 배치) 블록의 행렬곱을 수행하고, 세 번째 인자 `acc`(`accumulator`)가 주어지면 기존 `accumulator` 값 위에 방금 곱한 결과를 더한 새 블록($\text{acc} \leftarrow \text{acc} + a \times b$)을 반환한다.
+여기서 [`tl.dot(input, other, acc=None, ...)`](https://triton-lang.org/main/python-api/generated/triton.language.dot.html)은 두 2차원(또는 3차원 배치) 블록의 행렬곱을 수행하고, 세 번째 인자 `acc`(`accumulator`)가 주어지면 기존 `accumulator` 값 위에 방금 곱한 결과를 더한 새 블록(`acc <- acc + a @ b`)을 반환한다.
 
 2.1절에서 짚었듯 입력 `a`와 `b`는 `tl.float16`(2 Byte)인데 `accumulator`를 2배 더 큰 `tl.float32`(4 Byte)로 선언하는 데는 두 가지 이유가 맞물려 있다.
 
@@ -418,7 +417,7 @@ b 타일 한 줄: [ B[4, 0],  빈자리(k=5) ]
 | **`A`의 열(`K`) 읽기**<br/>**`B`의 행(`K`) 읽기** | `mask = offs_k[None, :] < K - k * BK`<br/>`mask = offs_k[:, None] < K - k * BK`<br/>`other = 0.0` | `K`축은 곱해서 **같은 출력 원소에 더해지는(누적되는) 리덕션 차원**이다. 만약 `K`축 초과 구간에 `% K`로 다른 열·행 값을 읽어 오거나 `0.0`이 아닌 값을 채우면, 그 곱셈 결과가 **유효한 출력 원소들의 내적 합계(`accumulator[i, j]`)에 추가로 더해져 답이 틀려진다.** 따라서 `K`축의 빈자리는 반드시 곱셈·덧셈의 항등원 역할을 하는 `0.0`으로 채워(`0 × 0 = 0`) 누적합을 바꾸지 않게 해야 한다. |
 | **`C`의 행(`M`)·열(`N`) 쓰기** | `c_mask = (offs_cm[:, None] < M) & (offs_cn[None, :] < N)`<br/>`tl.store(c_ptrs, c, mask=c_mask)` | 출력 행렬 `C`의 실제 경계(`M × N`) 안쪽에 있는 유효 원소만 HBM에 기록하고, 바깥쪽 가짜 칸의 기록을 차단한다. |
 
-> **6주차 Softmax 패딩값과의 비교:** 6주차 Fused Softmax에서는 행의 빈자리에 최댓값(`tl.max`)과 지수합(`tl.exp` 후 `tl.sum`)을 왜곡하지 않기 위해 `other = -float('inf')`($e^{-\infty} = 0$)를 채웠다. 7주차 MatMul에서는 내적 $\sum_k A_{i,k} B_{k,j}$를 왜곡하지 않기 위해 `K`축 빈자리에 `other = 0.0`($0 \times 0 = 0$)을 채운다. **“리덕션(누적)이 일어나는 축의 빈자리에는 그 연산의 결과를 바꾸지 않는 항등원을 넣는다”**는 원리는 완전히 같다.
+> **6주차 Softmax 패딩값과의 비교:** 6주차 Fused Softmax에서는 행의 빈자리에 최댓값(`tl.max`)과 지수합(`tl.exp` 후 `tl.sum`)을 왜곡하지 않기 위해 `other = -float('inf')`(`exp(-inf) = 0`)를 채웠다. 7주차 MatMul에서는 내적 합산(`sum_k A[i, k] * B[k, j]`)을 왜곡하지 않기 위해 `K`축 빈자리에 `other = 0.0`(`0 × 0 = 0`)을 채운다. **“리덕션(누적)이 일어나는 축의 빈자리에는 그 연산의 결과를 바꾸지 않는 항등원을 넣는다”**는 원리는 완전히 같다.
 
 ### 3.5 에필로그 결합(Epilogue Fusion) — `accumulator`가 레지스터에 있을 때 `leaky_relu` 끼워 넣기
 
@@ -438,7 +437,7 @@ c = accumulator.to(tl.float16)
 1. **추가 HBM 왕복의 완전 제거:**
    - 만약 cuBLAS 같은 닫힌 라이브러리로 `c_temp = torch.matmul(a, b)`를 먼저 실행한 뒤 별도 커널로 `c = F.leaky_relu(c_temp)`를 호출한다면 어떻게 될까?
    - 첫 번째 커널이 `[M, N]` FP16 결과(`2MN Byte`)를 HBM에 쓰고, 두 번째 커널이 그 값을 다시 HBM에서 읽어(`2MN Byte`) 활성화 함수를 계산한 뒤 최종 결과를 HBM에 써야(`2MN Byte`) 한다.
-   - 반면 `matmul_kernel`의 K 루프 직후에는 `accumulator`의 모든 원소가 아직 **각 스레드의 온칩 레지스터(FP32)**에 들어 있다. 이 자리에서 바로 `leaky_relu`를 적용하고 `tl.float16`으로 변환해 `tl.store`를 한 번만 수행하면, 중간 텐서 `c_temp`를 HBM에 한 번 썼다가 다시 한 번 읽는 **`M × N × 2 Byte × 2회 = 4MN Byte`(FP16 중간 텐서 기준; 만약 FP32 상태로 HBM을 왕복한다면 `8MN Byte`)의 추가 HBM 이동**이 완전히 사라진다. (`M = N = 4096`일 때 FP16 기준 $2 \times 4096^2 \times 2\ \text{Byte} = 67{,}108{,}864\ \text{Byte} \approx 67.11\ \text{MB}$ 절약.)
+   - 반면 `matmul_kernel`의 K 루프 직후에는 `accumulator`의 모든 원소가 아직 **각 스레드의 온칩 레지스터(FP32)**에 들어 있다. 이 자리에서 바로 `leaky_relu`를 적용하고 `tl.float16`으로 변환해 `tl.store`를 한 번만 수행하면, 중간 텐서 `c_temp`를 HBM에 한 번 썼다가 다시 한 번 읽는 **`M × N × 2 Byte × 2회 = 4MN Byte`(FP16 중간 텐서 기준; 만약 FP32 상태로 HBM을 왕복한다면 `8MN Byte`)의 추가 HBM 이동**이 완전히 사라진다. (`M = N = 4096`일 때 FP16 기준 `2 × 4096² × 2 Byte = 67,108,864 Byte ≈ 67.11 MB` 절약.)
 2. **FP32 정밀도 상태에서 활성화 함수 계산:**
    - `c = accumulator.to(tl.float16)`으로 양자화하기 직전인 FP32 상태에서 활성화 함수(`tl.where(x >= 0, x, 0.01 * x)`)를 계산하므로, `0.01 * x`처럼 작은 기울기를 곱할 때도 FP16 반올림 오차가 덜 발생한다.
 3. **`ACTIVATION: tl.constexpr`를 통한 분기 비용 제거:**
@@ -452,7 +451,7 @@ c = accumulator.to(tl.float16)
 
 ### 4.1 출력 타일 내부 재사용(SRAM)과 출력 타일 사이 재사용(L2 캐시)의 차이
 
-4주차 손계산에서는 각 출력 타일 `C[pid_m, pid_n]`이 필요한 `A` 행 타일과 `B` 열 타일을 매번 HBM에서 새로 읽어 온다고 가정했다(“출력 타일 사이의 캐시 재사용 없음”). 이 가정 아래에서는 프로그램 인스턴스들을 어떤 순서로 실행하든 총 HBM 읽기량이 $Q_{\mathrm{read}} = 2MNK(1/\mathrm{BN} + 1/\mathrm{BM})$로 똑같다.
+4주차 손계산에서는 각 출력 타일 `C[pid_m, pid_n]`이 필요한 `A` 행 타일과 `B` 열 타일을 매번 HBM에서 새로 읽어 온다고 가정했다(“출력 타일 사이의 캐시 재사용 없음”). 이 가정 아래에서는 프로그램 인스턴스들을 어떤 순서로 실행하든 총 HBM 읽기량이 `Q_read = 2MNK(1/BN + 1/BM)`로 똑같다.
 
 하지만 실제 GPU의 메모리 계층에는 각 SM(Streaming Multiprocessor) 내부의 Shared Memory·레지스터 아래에 **모든 SM이 함께 공유하는 온칩 L2 캐시(수 MB ~ 수십 MB)**가 자리 잡고 있다. 이를 주방에 비유하면 이해하기 쉽다.
 
@@ -591,30 +590,30 @@ pid_n = (pid % num_pid_in_group) // group_size_m
 |---|---:|---:|---|
 | 계산하는 출력 블록 수 (`pid = 0 ~ 8`) | `9`개 (`C[0, 0:9]`, `1×9` 모양) | `9`개 (`C[0:3, 0:3]`, `3×3` 모양) | 계산하는 출력 블록 개수와 연산량은 동일 |
 | 필요한 `A`의 고유 블록 행 수 | `1`개 행 (`m = 0`) | `3`개 행 (`m = 0, 1, 2`) | 그룹 순서가 `A` 행은 3배로 읽음 |
-| **필요한 `A` 입력 타일 수** (행당 K-타일 9개) | $1 \times 9 = \mathbf{9}$개 | $3 \times 9 = \mathbf{27}$개 | |
+| **필요한 `A` 입력 타일 수** (행당 K-타일 9개) | `1 × 9 =` **`9`개** | `3 × 9 =` **`27`개** | |
 | 필요한 `B`의 고유 블록 열 수 | `9`개 열 (`n = 0 ~ 8`) | `3`개 열 (`n = 0, 1, 2`) | 그룹 순서가 `B` 열은 3분의 1만 읽음 |
-| **필요한 `B` 입력 타일 수** (열당 K-타일 9개) | $9 \times 9 = \mathbf{81}$개 | $3 \times 9 = \mathbf{27}$개 | |
-| **총 고유 입력 타일 수 (`A + B`)** | $9 + 81 = \mathbf{90}$**개** | $27 + 27 = \mathbf{54}$**개** | **36개 감소 (`40.0%` 감소)** |
-| 입력 타일 1개당 평균 사용 횟수 (`18×9 ÷ 고유 타일`) | $162 \div 90 = \mathbf{1.8}$회 | $162 \div 54 = \mathbf{3.0}$회 | 한 번 불러온 타일을 평균 3개 블록이 공유 |
+| **필요한 `B` 입력 타일 수** (열당 K-타일 9개) | `9 × 9 =` **`81`개** | `3 × 9 =` **`27`개** | |
+| **총 고유 입력 타일 수 (`A + B`)** | `9 + 81 =` **`90`개** | `27 + 27 =` **`54`개** | **36개 감소 (`40.0%` 감소)** |
+| 입력 타일 1개당 평균 사용 횟수 (`18×9 ÷ 고유 타일`) | `162 ÷ 90 =` **`1.8`회** | `162 ÷ 54 =` **`3.0`회** | 한 번 불러온 타일을 평균 3개 블록이 공유 |
 
 ### 4.4 왜 직사각형보다 정사각형에 가까운 작업 구역이 유리할까
 
-위 결과를 일반화해 보자. 동시에(또는 연이어) 실행되는 $P$개의 프로그램 인스턴스가 출력 행렬 위에서 세로 $r$개 블록 행, 가로 $c$개 블록 열($r \times c = P$)을 이루고, K축 블록 수가 $K_b = K / \mathrm{BK}$개라고 하자.
+위 결과를 일반화해 보자. 동시에(또는 연이어) 실행되는 `P`개의 프로그램 인스턴스가 출력 행렬 위에서 세로 `r`개 블록 행, 가로 `c`개 블록 열(`r × c = P`)을 이루고, K축 블록 수가 `K_b = K / BK`개라고 하자.
 
-이 $P$개의 출력 블록을 계산하는 데 필요한 고유 입력 타일 수는 다음과 같다.
+이 `P`개의 출력 블록을 계산하는 데 필요한 고유 입력 타일 수는 다음과 같다.
 
-$$
-\text{고유 입력 타일 수} = (r + c) \times K_b = \left(r + \frac{P}{r}\right) \times K_b
-$$
+```text
+고유 입력 타일 수 = (r + c) × K_b = (r + P / r) × K_b
+```
 
-넓이 $r \times c = P$(계산하는 출력 블록 수)가 똑같을 때, 필요한 입력 줄 수인 두 변의 합 $r + c$는 산술-기하 평균 부등식($r + c \ge 2\sqrt{rc} = 2\sqrt{P}$)에 의해 **$r = c = \sqrt{P}$인 정사각형일 때 최소**가 된다.
-- $P = 9$일 때 $1 \times 9$ 길쭉한 직사각형(행 우선)은 $r + c = 1 + 9 = 10$줄($10 \times 9 = 90$개 타일)이 필요하지만,
-- $3 \times 3$ 정사각형(`GROUP_SIZE_M = 3`)은 $r + c = 3 + 3 = 6$줄($6 \times 9 = 54$개 타일)만 있으면 된다.
+넓이 `r × c = P`(계산하는 출력 블록 수)가 똑같을 때, 필요한 입력 줄 수인 두 변의 합 `r + c`는 산술-기하 평균 부등식(`r + c >= 2 * sqrt(r * c) = 2 * sqrt(P)`)에 의해 **`r = c = sqrt(P)`인 정사각형일 때 최소**가 된다.
+- `P = 9`일 때 `1 × 9` 길쭉한 직사각형(행 우선)은 `r + c = 1 + 9 = 10`줄(`10 × 9 = 90`개 타일)이 필요하지만,
+- `3 × 3` 정사각형(`GROUP_SIZE_M = 3`)은 `r + c = 3 + 3 = 6`줄(`6 × 9 = 54`개 타일)만 있으면 된다.
 
 여기서 반드시 짚고 넘어갈 핵심이 있다.
 
 > **그룹 순서(`GROUP_SIZE_M`)가 바꾸는 것과 바꾸지 않는 것:**  
-> 그룹 순서는 총 부동소수점 연산량($2MNK$)이나 각 프로그램 인스턴스가 커널 안에서 호출하는 `tl.load` 횟수를 줄이지 않는다. 대신 **동시에 실행 중인 SM들이 같은 시간 창(time window) 안에서 요구하는 입력 타일의 작업 집합(Working Set) 크기를 줄여 L2 캐시 적중률(Hit Rate)을 높이고, L2 Miss로 인해 실제 HBM까지 나가는 트래픽을 줄이는 블록 스케줄링 기법**이다.
+> 그룹 순서는 총 부동소수점 연산량(`2MNK`)이나 각 프로그램 인스턴스가 커널 안에서 호출하는 `tl.load` 횟수를 줄이지 않는다. 대신 **동시에 실행 중인 SM들이 같은 시간 창(time window) 안에서 요구하는 입력 타일의 작업 집합(Working Set) 크기를 줄여 L2 캐시 적중률(Hit Rate)을 높이고, L2 Miss로 인해 실제 HBM까지 나가는 트래픽을 줄이는 블록 스케줄링 기법**이다.
 
 ---
 
@@ -805,7 +804,7 @@ def matmul(a, b, activation=""):
 
 | 구분 | 설정 이름 | 무엇을 결정하는가? | 키웠을 때의 이득 | 키웠을 때의 비용·위험 |
 |---|---|---|---|---|
-| **타일 메타파라미터**<br/>(`kwargs` → `tl.constexpr`) | `BLOCK_SIZE_M` (`BM`)<br/>`BLOCK_SIZE_N` (`BN`) | 인스턴스 1개가 담당하는 출력 타일 크기 `[BM, BN]`과 FP32 누산기 크기(`4·BM·BN` B) | 출력 타일 내부 재사용이 늘어 **HBM 읽기량 $Q_{\mathrm{read}}$ 감소 및 산술 강도 $I$ 상승** | 레지스터(`accumulator`)와 Shared Memory 사용량 증가; 작은 행렬에서는 그리드(`pid` 수)가 줄어 SM 놀림(Wave Quantization) 발생 |
+| **타일 메타파라미터**<br/>(`kwargs` → `tl.constexpr`) | `BLOCK_SIZE_M` (`BM`)<br/>`BLOCK_SIZE_N` (`BN`) | 인스턴스 1개가 담당하는 출력 타일 크기 `[BM, BN]`과 FP32 누산기 크기(`4·BM·BN` B) | 출력 타일 내부 재사용이 늘어 **HBM 읽기량 `Q_read` 감소 및 산술 강도 `I` 상승** | 레지스터(`accumulator`)와 Shared Memory 사용량 증가; 작은 행렬에서는 그리드(`pid` 수)가 줄어 SM 놀림(Wave Quantization) 발생 |
 | **타일 메타파라미터**<br/>(`kwargs` → `tl.constexpr`) | `BLOCK_SIZE_K` (`BK`) | K 루프 한 번에 읽고 곱하는 내적 폭 (`K / BK`회 반복) | 루프 반복 횟수와 분기·동기화 오버헤드 감소, Tensor Core 명령 효율 향상 | 1단계 입력 버퍼 크기(`2(BM·BK + BK·BN)` B)가 커져 **Shared Memory 압박 증가** |
 | **타일 메타파라미터**<br/>(`kwargs` → `tl.constexpr`) | `GROUP_SIZE_M` | L2 캐시 그룹 순서에서 한 그룹에 묶는 블록 행 수 | 이웃 인스턴스 간 `A`·`B` 타일 공유로 **L2 캐시 적중률 향상** | 행렬의 `M / BM`과 맞지 않으면 그룹 경계에서 정사각형 비율이 깨질 수 있음 |
 | **컴파일 옵션**<br/>(`CUDAOptions`) | `num_warps` | 인스턴스(CTA) 1개를 실행하는 워프 수 (`1 warp = 32 threads`, 총 `32 × num_warps` 스레드) | 큰 타일의 로드와 `mma` 연산을 더 많은 워프가 분담하고 스레드당 레지스터 부담 완화 | 블록당 스레드 수가 늘어 워프 간 동기화(`bar.sync`) 비용 증가 및 SM당 동시 상주 블록 수 제한 가능 |
@@ -813,7 +812,7 @@ def matmul(a, b, activation=""):
 
 ### 5.3 데이터 이동과 연산의 중첩 — `num_stages` 소프트웨어 파이프라이닝과 지연시간 은닉
 
-6절에서 확인하겠지만, 타일 크기를 `128×256`처럼 충분히 키워 산술 강도 $I$가 분기점($I_{\mathrm{ridge}} = 80\ \text{FLOP/Byte}$)을 넘어서면 커널은 이론적으로 연산 병목(Compute-bound) 구간에 들어간다. 그런데 [Modern GPU Programming의 Reducing Idle Time Through Overlap 절](https://mlc.ai/modern-gpu-programming-for-mlsys/chapter_performance/index.html#reducing-idle-time-through-overlap)이 강조하듯, **산술 강도가 높다는 것만으로 연산 장치(Tensor Core)가 쉬지 않고 일하는 것은 아니다.**
+6절에서 확인하겠지만, 타일 크기를 `128×256`처럼 충분히 키워 산술 강도 `I`가 분기점(`I_ridge = 80 FLOP/Byte`)을 넘어서면 커널은 이론적으로 연산 병목(Compute-bound) 구간에 들어간다. 그런데 [Modern GPU Programming의 Reducing Idle Time Through Overlap 절](https://mlc.ai/modern-gpu-programming-for-mlsys/chapter_performance/index.html#reducing-idle-time-through-overlap)이 강조하듯, **산술 강도가 높다는 것만으로 연산 장치(Tensor Core)가 쉬지 않고 일하는 것은 아니다.**
 
 만약 K 루프에서 매 단계 `k`마다 ① HBM에서 `a_k`, `b_k` 타일이 도착할 때까지 기다렸다가, ② 도착한 뒤에야 `tl.dot`을 실행하고, ③ `tl.dot`이 끝난 뒤에야 `k+1`번째 타일을 요청한다면, Tensor Core는 데이터를 기다리는 동안 멈춰 있고 메모리 버스는 계산하는 동안 놀게 된다.
 
@@ -852,7 +851,7 @@ k = 2 반복      (k=3 도착 대기 중)        📥 Load(k=4) 비동기 요청
 그렇다면 타일 크기(`BM, BN, BK`)와 `num_stages`를 무조건 크게 잡으면 좋을까? 그렇지 않다([Modern GPU Programming: Occupancy and Resource Pressure](https://mlc.ai/modern-gpu-programming-for-mlsys/chapter_performance/index.html#occupancy-and-resource-pressure) 참고).
 
 GPU의 각 SM이 가진 **온칩 자원(Shared Memory 용량과 32비트 레지스터 파일 크기)**은 유한하고 엄격한 상한이 있다.
-- **Shared Memory 한계:** `num_stages` 단계 파이프라이닝을 하려면 Shared Memory에 $\text{num\_stages} \times 2\ \text{Byte} \times (\mathrm{BM}\cdot\mathrm{BK} + \mathrm{BK}\cdot\mathrm{BN})$ 크기의 입력 버퍼를 동시에 올려 두어야 한다. 만약 이 크기가 해당 GPU 아키텍처의 블록(CTA)당 최대 Shared Memory(예: Turing `sm_75` Tesla T4는 **64 KiB**, Ampere `sm_80` A100은 **164 KiB**, Hopper `sm_90` H100은 **228 KiB**)를 넘으면 커널은 아예 실행조차 할 수 없고 Triton 런타임이 `OutOfResources` 예외를 던진다.
+- **Shared Memory 한계:** `num_stages` 단계 파이프라이닝을 하려면 Shared Memory에 `num_stages × 2 Byte × (BM × BK + BK × BN)` 크기의 입력 버퍼를 동시에 올려 두어야 한다. 만약 이 크기가 해당 GPU 아키텍처의 블록(CTA)당 최대 Shared Memory(예: Turing `sm_75` Tesla T4는 **64 KiB**, Ampere `sm_80` A100은 **164 KiB**, Hopper `sm_90` H100은 **228 KiB**)를 넘으면 커널은 아예 실행조차 할 수 없고 Triton 런타임이 `OutOfResources` 예외를 던진다.
 - **레지스터 압박과 점유율(Occupancy):** 출력 타일 `BM × BN`이 커지면 스레드들이 나눠 들고 있어야 하는 FP32 `accumulator`(`4 × BM × BN` Byte) 레지스터 조각이 커진다. 블록 하나가 너무 많은 Shared Memory나 레지스터를 차지하면 한 SM에 동시에 올라갈 수 있는 블록 수(활성 워프 비율, 즉 **Occupancy**)가 줄어들고, 심하면 레지스터가 모자라 로컬 메모리(HBM)로 값을 쏟는 **레지스터 스필(Register Spill)**이 일어나 성능이 급락한다.
 - **작은 행렬에서의 병렬성 부족(Wave Quantization):** 행렬 크기 `M, N`이 작은데 `BM, BN`을 너무 크게 잡으면 총 프로그램 인스턴스 수 `grid = cdiv(M, BM) * cdiv(N, BN)`가 GPU 전체 SM 개수보다 적어져 일부 SM이 놀게 된다.
 
@@ -885,89 +884,80 @@ GPU의 각 SM이 가진 **온칩 자원(Shared Memory 용량과 32비트 레지�
 - **후보 2 (중간 정사각 타일):** `BLOCK_SIZE_M = 128, BLOCK_SIZE_N = 128, BLOCK_SIZE_K = 32`, `num_stages = 4`, `num_warps = 4`
 - **후보 3 (큰 타일, 넓은 K폭):** `BLOCK_SIZE_M = 128, BLOCK_SIZE_N = 256, BLOCK_SIZE_K = 64`, `num_stages = 3`, `num_warps = 8`
 
-2.3절의 가상 하드웨어($P = 80\ \text{TFLOPs/s}$, $\mathrm{BW} = 1\ \text{TB/s}$, $I_{\mathrm{ridge}} = 80\ \text{FLOP/Byte}$)와 가정(입력·출력 FP16 = 2 Byte, 누산기 FP32 = 4 Byte, 출력 타일 간 L2 캐시 재사용 없음) 아래에서, `M, N, K`가 `BM, BN, BK`로 나누어떨어질 때 각 항목의 일반식은 다음과 같다.
+2.3절의 가상 하드웨어(`P = 80 TFLOPs/s`, `BW = 1 TB/s`, `I_ridge = 80 FLOP/Byte`)와 가정(입력·출력 FP16 = 2 Byte, 누산기 FP32 = 4 Byte, 출력 타일 간 L2 캐시 재사용 없음) 아래에서, `M, N, K`가 `BM, BN, BK`로 나누어떨어질 때 각 항목의 일반식은 다음과 같다.
 
 | 계산 항목 | 기호와 일반식 (입출력 2 B, 누산기 4 B) | 식의 의미와 주의점 |
 |---|---|---|
-| **총 연산량** | $F = 2 \times M \times N \times K$ | 타일 설정과 무관하게 일정 |
-| **연산 시간 하한** | $T_{\mathrm{compute}} = F / P$ | 모든 후보에서 동일 |
-| **실행 그리드 크기** | $\mathrm{grid} = \left(\frac{M}{\mathrm{BM}} \times \frac{N}{\mathrm{BN}},\right)$ | 총 프로그램 인스턴스(`pid`) 개수 |
-| **인스턴스당 K 루프 횟수** | $N_K = \frac{K}{\mathrm{BK}}$ | 한 인스턴스가 `tl.load`와 `tl.dot`을 반복하는 횟수 |
-| **1단계 `A + B` 입력 타일 크기** | $S_{\mathrm{1stage}} = 2\ \text{Byte} \times (\mathrm{BM}\cdot\mathrm{BK} + \mathrm{BK}\cdot\mathrm{BN})$ | K 루프 한 단계에서 읽는 `a`(`[BM, BK]`)와 `b`(`[BK, BN]`)의 합계 바이트 |
-| **파이프라인 입력 버퍼 합계** | $S_{\mathrm{pipe}} = \text{num\_stages} \times S_{\mathrm{1stage}}$ | 다중 버퍼링을 위해 Shared Memory에 동시에 잡아 두는 입력 버퍼 크기 |
-| **FP32 누산기 크기** | $S_{\mathrm{acc}} = 4\ \text{Byte} \times \mathrm{BM} \times \mathrm{BN}$ | 스레드들의 레지스터에 분산 유지되는 `accumulator`의 총 바이트 |
-| **HBM 입력 읽기 바이트** | $Q_{\mathrm{read}} = \mathrm{grid} \times N_K \times S_{\mathrm{1stage}} = 2MNK\left(\frac{1}{\mathrm{BN}} + \frac{1}{\mathrm{BM}}\right)$ | **`BK`와 `num_stages`가 약분되어 사라지고 `BM`, `BN`만 남음** |
-| **HBM 출력 쓰기 바이트** | $Q_{\mathrm{write}} = 2\ \text{Byte} \times M \times N$ | 루프 종료 후 `C`를 FP16으로 1회 기록 |
-| **총 HBM 이동량 및 산술 강도** | $Q = Q_{\mathrm{read}} + Q_{\mathrm{write}}, \quad I = \frac{F}{Q}$ | HBM 기준 데이터 이동량과 1 Byte당 연산 수 |
-| **메모리 시간 및 이상적 시간** | $T_{\mathrm{memory}} = \frac{Q}{\mathrm{BW}}, \quad T_{\mathrm{ideal}} = \max(T_{\mathrm{compute}}, T_{\mathrm{memory}})$ | 두 시간 중 더 큰 쪽이 병목 구간을 결정 |
+| **총 연산량** | `F = 2 × M × N × K` | 타일 설정과 무관하게 일정 |
+| **연산 시간 하한** | `T_compute = F / P` | 모든 후보에서 동일 |
+| **실행 그리드 크기** | `grid = ((M / BM) × (N / BN),)` | 총 프로그램 인스턴스(`pid`) 개수 |
+| **인스턴스당 K 루프 횟수** | `N_K = K / BK` | 한 인스턴스가 `tl.load`와 `tl.dot`을 반복하는 횟수 |
+| **1단계 `A + B` 입력 타일 크기** | `S_1stage = 2 Byte × (BM × BK + BK × BN)` | K 루프 한 단계에서 읽는 `a`(` [BM, BK]`)와 `b`(` [BK, BN]`)의 합계 바이트 |
+| **파이프라인 입력 버퍼 합계** | `S_pipe = num_stages × S_1stage` | 다중 버퍼링을 위해 Shared Memory에 동시에 잡아 두는 입력 버퍼 크기 |
+| **FP32 누산기 크기** | `S_acc = 4 Byte × BM × BN` | 스레드들의 레지스터에 분산 유지되는 `accumulator`의 총 바이트 |
+| **HBM 입력 읽기 바이트** | `Q_read = grid × N_K × S_1stage = 2MNK × (1/BN + 1/BM)` | **`BK`와 `num_stages`가 약분되어 사라지고 `BM`, `BN`만 남음** |
+| **HBM 출력 쓰기 바이트** | `Q_write = 2 Byte × M × N` | 루프 종료 후 `C`를 FP16으로 1회 기록 |
+| **총 HBM 이동량 및 산술 강도** | `Q = Q_read + Q_write`, `I = F / Q` | HBM 기준 데이터 이동량과 1 Byte당 연산 수 |
+| **메모리 시간 및 이상적 시간** | `T_memory = Q / BW`, `T_ideal = max(T_compute, T_memory)` | 두 시간 중 더 큰 쪽이 병목 구간을 결정 |
 
-> **직관적으로 이해하기 — 왜 $Q_{\mathrm{read}}$ 식에서 `BK`와 `num_stages`가 사라질까?**  
-> 1. **왜 `BK`가 사라지는가:** 프로그램 인스턴스 하나가 출력 타일 `[BM, BN]`을 완성하려면, 결국 행렬 `A`에서 **가로 길이 $K$ 전체인 `[BM, K]` 띠**를 읽고 행렬 `B`에서 **세로 길이 $K$ 전체인 `[K, BN]` 띠**를 읽어야 한다. 이를 `BK = 32`씩 128번에 나누어 읽든, `BK = 64`씩 64번에 나누어 읽든, **한 인스턴스가 처음부터 끝까지 읽는 총 바이트 수는 $2 \times (\mathrm{BM}\cdot K + K\cdot\mathrm{BN})$으로 똑같다!** 이 값에 전체 인스턴스 수 $\left(\frac{M}{\mathrm{BM}} \times \frac{N}{\mathrm{BN}}\right)$를 곱하면 $\mathrm{BK}$ 없이 곧바로 $2MNK\left(\frac{1}{\mathrm{BN}} + \frac{1}{\mathrm{BM}}\right)$이 나온다.  
-> 2. **왜 `num_stages`가 사라지는가:** `num_stages`는 데이터를 몇 번 중복해서 읽는지가 아니라, 앞으로 읽을 타일을 **몇 단계 미리 당겨서 Shared Memory 버퍼에 올려 둘지(대기실 칸 수)**만 정한다. 따라서 `BK`와 `num_stages`는 HBM 총 이동량($Q_{\mathrm{read}}$)을 바꾸지 않고, **온칩 Shared Memory 버퍼 크기($S_{\mathrm{1stage}}, S_{\mathrm{pipe}}$)만 바꾼다.**
+> **직관적으로 이해하기 — 왜 `Q_read` 식에서 `BK`와 `num_stages`가 사라질까?**  
+> 1. **왜 `BK`가 사라지는가:** 프로그램 인스턴스 하나가 출력 타일 `[BM, BN]`을 완성하려면, 결국 행렬 `A`에서 **가로 길이 `K` 전체인 `[BM, K]` 띠**를 읽고 행렬 `B`에서 **세로 길이 `K` 전체인 `[K, BN]` 띠**를 읽어야 한다. 이를 `BK = 32`씩 128번에 나누어 읽든, `BK = 64`씩 64번에 나누어 읽든, **한 인스턴스가 처음부터 끝까지 읽는 총 바이트 수는 `2 × (BM × K + K × BN)`으로 똑같다!** 이 값에 전체 인스턴스 수 `(M / BM) × (N / BN)`을 곱하면 `BK` 없이 곧바로 `2MNK × (1/BN + 1/BM)`이 나온다.  
+> 2. **왜 `num_stages`가 사라지는가:** `num_stages`는 데이터를 몇 번 중복해서 읽는지가 아니라, 앞으로 읽을 타일을 **몇 단계 미리 당겨서 Shared Memory 버퍼에 올려 둘지(대기실 칸 수)**만 정한다. 따라서 `BK`와 `num_stages`는 HBM 총 이동량(`Q_read`)을 바꾸지 않고, **온칩 Shared Memory 버퍼 크기(`S_1stage`, `S_pipe`)만 바꾼다.**
 
 ### 6.2 세 후보의 단계별 손계산 과정
 
-먼저 세 후보에 공통인 값을 구한다($M = N = K = 4096$).
+먼저 세 후보에 공통인 값을 구한다(`M = N = K = 4096`).
 
-- **총 연산량 $F$:**
-  $$
-  F = 2 \times 4096^3 = 2 \times 68{,}719{,}476{,}736 = \mathbf{137{,}438{,}953{,}472\ \mathrm{FLOPs}} \quad (\approx 137.44\ \mathrm{GFLOPs})
-  $$
-- **연산 시간 하한 $T_{\mathrm{compute}}$:**
-  $$
-  T_{\mathrm{compute}} = \frac{137{,}438{,}953{,}472}{80 \times 10^{12}} = 0.0017179869...\ \mathrm{s} \approx \mathbf{1.7180\ \mathrm{ms}}
-  $$
-- **HBM 출력 쓰기량 $Q_{\mathrm{write}}$:**
-  $$
-  Q_{\mathrm{write}} = 2\ \text{Byte} \times 4096 \times 4096 = \mathbf{33{,}554{,}432\ \mathrm{Byte}} \quad (\approx 33.55\ \mathrm{MB},\ 32\ \mathrm{MiB})
-  $$
+- **총 연산량 `F`:** `F = 2 × 4096³ = 2 × 68,719,476,736 =` **`137,438,953,472 FLOPs`** (`≈ 137.44 GFLOPs`)
+- **연산 시간 하한 `T_compute`:** `T_compute = 137,438,953,472 / (80 × 10¹²) = 0.0017179869... s ≈` **`1.7180 ms`**
+- **HBM 출력 쓰기량 `Q_write`:** `Q_write = 2 Byte × 4096 × 4096 =` **`33,554,432 Byte`** (`≈ 33.55 MB`, `32 MiB`)
 
 이제 각 후보의 세부 수치를 차례대로 계산한다.
 
 #### ① 후보 1: `BM = 64, BN = 32, BK = 32`, `num_stages = 5`, `num_warps = 2`
 
 1. **그리드와 K 루프:**
-   - $\mathrm{grid} = (4096 / 64) \times (4096 / 32) = 64 \times 128 = \mathbf{(8192,)}$
-   - $N_K = 4096 / 32 = \mathbf{128}\text{회}$
+   - `grid = (4096 / 64) × (4096 / 32) = 64 × 128 =` **`(8192,)`**
+   - `N_K = 4096 / 32 =` **`128`회**
 2. **온칩 버퍼와 누산기 크기:**
-   - 1단계 `A + B` 입력 타일: $S_{\mathrm{1stage}} = 2 \times (64 \times 32 + 32 \times 32) = 2 \times (2048 + 1024) = \mathbf{6{,}144\ \mathrm{Byte}} = \mathbf{6\ \mathrm{KiB}}$
-   - 5단계 파이프라인 입력 버퍼: $S_{\mathrm{pipe}} = 5 \times 6{,}144 = \mathbf{30{,}720\ \mathrm{Byte}} = \mathbf{30\ \mathrm{KiB}}$
-   - FP32 누산기: $S_{\mathrm{acc}} = 4 \times 64 \times 32 = \mathbf{8{,}192\ \mathrm{Byte}} = \mathbf{8\ \mathrm{KiB}}$ (스레드 수 $2 \times 32 = 64$개 기준 스레드당 FP32 원소 $2048 / 64 = 32$개)
+   - 1단계 `A + B` 입력 타일: `S_1stage = 2 × (64 × 32 + 32 × 32) = 2 × (2048 + 1024) =` **`6,144 Byte` (`6 KiB`)**
+   - 5단계 파이프라인 입력 버퍼: `S_pipe = 5 × 6,144 =` **`30,720 Byte` (`30 KiB`)**
+   - FP32 누산기: `S_acc = 4 × 64 × 32 =` **`8,192 Byte` (`8 KiB`)** (스레드 수 `2 × 32 = 64`개 기준 스레드당 FP32 원소 `2048 / 64 = 32`개)
 3. **HBM 이동량, 산술 강도, 이상적 시간:**
-   - $Q_{\mathrm{read}} = 8192 \times 128 \times 6{,}144 = 2 \times 4096^3 \times \left(\frac{1}{32} + \frac{1}{64}\right) = \mathbf{6{,}442{,}450{,}944\ \mathrm{Byte}}$
-   - $Q = 6{,}442{,}450{,}944 + 33{,}554{,}432 = \mathbf{6{,}476{,}005{,}376\ \mathrm{Byte}}$ ($\approx 6.476\ \mathrm{GB}$)
-   - $I = \frac{137{,}438{,}953{,}472}{6{,}476{,}005{,}376} \approx \mathbf{21.2228\ \mathrm{FLOP/Byte}}$ ($< 80$이므로 **HBM 대역폭 병목**)
-   - $T_{\mathrm{memory}} = \frac{6{,}476{,}005{,}376}{10^{12}} \approx \mathbf{6.4760\ \mathrm{ms}} \implies T_{\mathrm{ideal}} = \max(1.7180,\ 6.4760) = \mathbf{6.4760\ \mathrm{ms}}$
+   - `Q_read = 8192 × 128 × 6,144 = 2 × 4096³ × (1/32 + 1/64) =` **`6,442,450,944 Byte`**
+   - `Q = 6,442,450,944 + 33,554,432 =` **`6,476,005,376 Byte`** (`≈ 6.476 GB`)
+   - `I = 137,438,953,472 / 6,476,005,376 ≈` **`21.2228 FLOP/Byte`** (`< 80`이므로 **HBM 대역폭 병목**)
+   - `T_memory = 6,476,005,376 / 10¹² ≈` **`6.4760 ms`** `-> T_ideal = max(1.7180, 6.4760) =` **`6.4760 ms`**
 
 #### ② 후보 2: `BM = 128, BN = 128, BK = 32`, `num_stages = 4`, `num_warps = 4`
 
 1. **그리드와 K 루프:**
-   - $\mathrm{grid} = (4096 / 128) \times (4096 / 128) = 32 \times 32 = \mathbf{(1024,)}$
-   - $N_K = 4096 / 32 = \mathbf{128}\text{회}$
+   - `grid = (4096 / 128) × (4096 / 128) = 32 × 32 =` **`(1024,)`**
+   - `N_K = 4096 / 32 =` **`128`회**
 2. **온칩 버퍼와 누산기 크기:**
-   - 1단계 `A + B` 입력 타일: $S_{\mathrm{1stage}} = 2 \times (128 \times 32 + 32 \times 128) = 2 \times (4096 + 4096) = \mathbf{16{,}384\ \mathrm{Byte}} = \mathbf{16\ \mathrm{KiB}}$
-   - 4단계 파이프라인 입력 버퍼: $S_{\mathrm{pipe}} = 4 \times 16{,}384 = \mathbf{65{,}536\ \mathrm{Byte}} = \mathbf{64\ \mathrm{KiB}}$
-   - FP32 누산기: $S_{\mathrm{acc}} = 4 \times 128 \times 128 = \mathbf{65{,}536\ \mathrm{Byte}} = \mathbf{64\ \mathrm{KiB}}$ (스레드 수 $4 \times 32 = 128$개 기준 스레드당 FP32 원소 $16{,}384 / 128 = 128$개)
+   - 1단계 `A + B` 입력 타일: `S_1stage = 2 × (128 × 32 + 32 × 128) = 2 × (4096 + 4096) =` **`16,384 Byte` (`16 KiB`)**
+   - 4단계 파이프라인 입력 버퍼: `S_pipe = 4 × 16,384 =` **`65,536 Byte` (`64 KiB`)**
+   - FP32 누산기: `S_acc = 4 × 128 × 128 =` **`65,536 Byte` (`64 KiB`)** (스레드 수 `4 × 32 = 128`개 기준 스레드당 FP32 원소 `16,384 / 128 = 128`개)
 3. **HBM 이동량, 산술 강도, 이상적 시간:**
-   - $Q_{\mathrm{read}} = 1024 \times 128 \times 16{,}384 = 2 \times 4096^3 \times \left(\frac{1}{128} + \frac{1}{128}\right) = \mathbf{2{,}147{,}483{,}648\ \mathrm{Byte}}$
-   - $Q = 2{,}147{,}483{,}648 + 33{,}554{,}432 = \mathbf{2{,}181{,}038{,}080\ \mathrm{Byte}}$ ($\approx 2.181\ \mathrm{GB}$)
-   - $I = \frac{137{,}438{,}953{,}472}{2{,}181{,}038{,}080} \approx \mathbf{63.0154\ \mathrm{FLOP/Byte}}$ ($< 80$이므로 여전히 **HBM 대역폭 병목**)
-   - $T_{\mathrm{memory}} = \frac{2{,}181{,}038{,}080}{10^{12}} \approx \mathbf{2.1810\ \mathrm{ms}} \implies T_{\mathrm{ideal}} = \max(1.7180,\ 2.1810) = \mathbf{2.1810\ \mathrm{ms}}$
+   - `Q_read = 1024 × 128 × 16,384 = 2 × 4096³ × (1/128 + 1/128) =` **`2,147,483,648 Byte`**
+   - `Q = 2,147,483,648 + 33,554,432 =` **`2,181,038,080 Byte`** (`≈ 2.181 GB`)
+   - `I = 137,438,953,472 / 2,181,038,080 ≈` **`63.0154 FLOP/Byte`** (`< 80`이므로 여전히 **HBM 대역폭 병목**)
+   - `T_memory = 2,181,038,080 / 10¹² ≈` **`2.1810 ms`** `-> T_ideal = max(1.7180, 2.1810) =` **`2.1810 ms`**
 
 #### ③ 후보 3: `BM = 128, BN = 256, BK = 64`, `num_stages = 3`, `num_warps = 8`
 
 1. **그리드와 K 루프:**
-   - $\mathrm{grid} = (4096 / 128) \times (4096 / 256) = 32 \times 16 = \mathbf{(512,)}$
-   - $N_K = 4096 / 64 = \mathbf{64}\text{회}$
+   - `grid = (4096 / 128) × (4096 / 256) = 32 × 16 =` **`(512,)`**
+   - `N_K = 4096 / 64 =` **`64`회**
 2. **온칩 버퍼와 누산기 크기:**
-   - 1단계 `A + B` 입력 타일: $S_{\mathrm{1stage}} = 2 \times (128 \times 64 + 64 \times 256) = 2 \times (8192 + 16{,}384) = \mathbf{49{,}152\ \mathrm{Byte}} = \mathbf{48\ \mathrm{KiB}}$
-   - 3단계 파이프라인 입력 버퍼: $S_{\mathrm{pipe}} = 3 \times 49{,}152 = \mathbf{147{,}456\ \mathrm{Byte}} = \mathbf{144\ \mathrm{KiB}}$
-   - FP32 누산기: $S_{\mathrm{acc}} = 4 \times 128 \times 256 = \mathbf{131{,}072\ \mathrm{Byte}} = \mathbf{128\ \mathrm{KiB}}$ (스레드 수 $8 \times 32 = 256$개 기준 스레드당 FP32 원소 $32{,}768 / 256 = 128$개)
+   - 1단계 `A + B` 입력 타일: `S_1stage = 2 × (128 × 64 + 64 × 256) = 2 × (8192 + 16,384) =` **`49,152 Byte` (`48 KiB`)**
+   - 3단계 파이프라인 입력 버퍼: `S_pipe = 3 × 49,152 =` **`147,456 Byte` (`144 KiB`)**
+   - FP32 누산기: `S_acc = 4 × 128 × 256 =` **`131,072 Byte` (`128 KiB`)** (스레드 수 `8 × 32 = 256`개 기준 스레드당 FP32 원소 `32,768 / 256 = 128`개)
 3. **HBM 이동량, 산술 강도, 이상적 시간:**
-   - $Q_{\mathrm{read}} = 512 \times 64 \times 49{,}152 = 2 \times 4096^3 \times \left(\frac{1}{256} + \frac{1}{128}\right) = \mathbf{1{,}610{,}612{,}736\ \mathrm{Byte}}$
-   - $Q = 1{,}610{,}612{,}736 + 33{,}554{,}432 = \mathbf{1{,}644{,}167{,}168\ \mathrm{Byte}}$ ($\approx 1.644\ \mathrm{GB}$)
-   - $I = \frac{137{,}438{,}953{,}472}{1{,}644{,}167{,}168} \approx \mathbf{83.5918\ \mathrm{FLOP/Byte}}$ ($> 80$이므로 **연산 처리율 병목 (Compute-bound)** 진입!)
-   - $T_{\mathrm{memory}} = \frac{1{,}644{,}167{,}168}{10^{12}} \approx \mathbf{1.6442\ \mathrm{ms}} < T_{\mathrm{compute}} = 1.7180\ \mathrm{ms} \implies T_{\mathrm{ideal}} = \mathbf{1.7180\ \mathrm{ms}}$
+   - `Q_read = 512 × 64 × 49,152 = 2 × 4096³ × (1/256 + 1/128) =` **`1,610,612,736 Byte`**
+   - `Q = 1,610,612,736 + 33,554,432 =` **`1,644,167,168 Byte`** (`≈ 1.644 GB`)
+   - `I = 137,438,953,472 / 1,644,167,168 ≈` **`83.5918 FLOP/Byte`** (`> 80`이므로 **연산 처리율 병목 (Compute-bound)** 진입!)
+   - `T_memory = 1,644,167,168 / 10¹² ≈` **`1.6442 ms`** `< T_compute = 1.7180 ms -> T_ideal =` **`1.7180 ms`**
 
 ### 6.3 세 후보 종합 비교표와 핵심 해석 3가지
 
@@ -995,7 +985,7 @@ GPU의 각 SM이 가진 **온칩 자원(Shared Memory 용량과 32비트 레지�
 이 계산표에서 꼭 읽어내야 할 핵심은 세 가지다.
 
 1. **출력 타일(`BM, BN`)을 키우면 HBM 이동량이 줄어 분기점(`80 FLOP/Byte`)을 넘어선다:**
-   후보 1(`64×32`)에서는 $Q \approx 6.476\ \mathrm{GB}$, $I \approx 21.22\ \mathrm{FLOP/Byte}$로 HBM 대역폭에 묶여 피크 성능의 약 4분의 1(`21.22 TFLOPs/s`)밖에 내지 못한다. 반면 후보 3(`128×256`)으로 출력 타일을 키우면 $Q \approx 1.644\ \mathrm{GB}$로 줄고 $I \approx 83.59\ \mathrm{FLOP/Byte}$가 되어 분기점($80\ \mathrm{FLOP/Byte}$) 오른쪽인 **연산 병목(Compute-bound)** 구간에 진입한다. 여기에 4절의 L2 캐시 그룹핑 재사용까지 더해지면 실제 유효 산술 강도는 더 높아진다.
+   후보 1(`64×32`)에서는 `Q ≈ 6.476 GB`, `I ≈ 21.22 FLOP/Byte`로 HBM 대역폭에 묶여 피크 성능의 약 4분의 1(`21.22 TFLOPs/s`)밖에 내지 못한다. 반면 후보 3(`128×256`)으로 출력 타일을 키우면 `Q ≈ 1.644 GB`로 줄고 `I ≈ 83.59 FLOP/Byte`가 되어 분기점(`80 FLOP/Byte`) 오른쪽인 **연산 병목(Compute-bound)** 구간에 진입한다. 여기에 4절의 L2 캐시 그룹핑 재사용까지 더해지면 실제 유효 산술 강도는 더 높아진다.
 2. **타일이 커질수록 `num_warps`는 늘리고 `num_stages`는 줄여서 균형을 맞춘다:**
    후보 1 → 2 → 3으로 갈수록 출력 타일 원소 수가 `2,048 → 16,384 → 32,768`개로 커진다. 만약 후보 3에서도 `num_warps = 2`(64 스레드)를 그대로 썼다면 스레드 하나가 혼자 FP32 누산기 `512`개(`2 KiB`)를 레지스터에 들고 있어야 해 레지스터 한계(스레드당 최대 255개)를 넘겼을 것이다. 그래서 후보 3은 `num_warps = 8`(256 스레드)로 늘려 **스레드당 누산 원소 수를 후보 2와 같은 `128`개로 유지**하고, 대신 1단계 입력 타일이 `48 KiB`로 커졌으므로 `num_stages`를 `5 → 4 → 3`으로 낮춰 Shared Memory 폭증을 억제했다.
 3. **`64 KiB` Shared Memory 한계 장치에서의 `OutOfResources` 탈락:**
@@ -1194,8 +1184,8 @@ if TORCH_HAS_FP8 and is_cuda():
 여기서 두 가지를 확인해야 한다.
 
 1. **왜 6주차(`atol=1e-2`보다 훨씬 작은 `1e-5` 수준)와 달리 FP16 행렬곱에서는 `atol=1e-2, rtol=0`을 쓸까?**
-   - 컴퓨터의 부동소수점 덧셈은 더하는 순서에 따라 끝자리 반올림이 조금씩 달라져서 결합법칙($(a + b) + c = a + (b + c)$)이 완벽히 성립하지 않는다.
-   - Triton 커널이 선택한 타일 크기(`BLOCK_SIZE_K = 32` 또는 `64`)와 cuBLAS 커널이 내부적으로 선택한 타일 분할·리덕션 순서는 서로 다를 수 있으며, 마지막에 FP32 누산값을 FP16(가수 10비트, 약 $10^{-3}$ 상대 정밀도)으로 반올림할 때 미세한 차이가 발생한다. 따라서 FP16 행렬곱 검증에서는 `atol=1e-2` 수준의 허용 오차를 둔다.
+   - 컴퓨터의 부동소수점 덧셈은 더하는 순서에 따라 끝자리 반올림이 조금씩 달라져서 결합법칙(`(a + b) + c = a + (b + c)`)이 완벽히 성립하지 않는다.
+   - Triton 커널이 선택한 타일 크기(`BLOCK_SIZE_K = 32` 또는 `64`)와 cuBLAS 커널이 내부적으로 선택한 타일 분할·리덕션 순서는 서로 다를 수 있으며, 마지막에 FP32 누산값을 FP16(가수 10비트, 약 `10⁻³` 상대 정밀도)으로 반올림할 때 미세한 차이가 발생한다. 따라서 FP16 행렬곱 검증에서는 `atol=1e-2` 수준의 허용 오차를 둔다.
 2. **2의 거듭제곱이 아닌 크기(`500 × 600 × 300` 등)를 추가로 시험해야 하는 이유:**
    - 공식 튜토리얼의 기본 테스트인 `512 × 512`는 모든 후보 타일 크기(`32, 64, 128, 256`)로 딱 나누어떨어진다. 즉, 만약 개발자가 실수로 `K`축 마스크나 `c_mask`를 잘못 작성했더라도 `512 × 512`에서는 버그가 드러나지 않는다.
    - 따라서 3.4절에서 배운 `% M`, `% N`, `offs_k < K - k * BK`, `c_mask`가 제대로 작동하는지 검증하려면 반드시 **`M = 500, N = 600, K = 300`처럼 타일 크기로 나누어떨어지지 않는 입력**으로도 `torch.allclose`를 확인해야 한다(10.2절 실습 코드에 포함).
@@ -1249,13 +1239,13 @@ def benchmark(M, N, K, provider, fp8_inputs):
 |---|---|---|
 | **벤치마크 변환 식** | `2 * x.numel() * x.element_size() * 1e-9 / (ms * 1e-3)` | `2 * M * N * K * 1e-12 / (ms * 1e-3)` |
 | **출력 단위 (`ylabel`)** | **`GB/s` (유효 메모리 대역폭)** | **`TFLOPs/s` (달성 연산 처리율)** |
-| **산술 강도 $I = F/Q$** | 약 `0.62 FLOP/Byte` (FP32 결합 커널 기준) | 약 `63 ~ 84+ FLOP/Byte` (`4096³` FP16 타일 커널 기준) |
+| **산술 강도 `I = F / Q`** | 약 `0.62 FLOP/Byte` (FP32 결합 커널 기준) | 약 `63 ~ 84+ FLOP/Byte` (`4096³` FP16 타일 커널 기준) |
 | **Roofline 병목 구간** | 분기점 왼쪽의 **HBM 대역폭 병목 (Memory-bound)** | 분기점 부근·오른쪽의 **연산 처리율 병목 (Compute-bound)** |
-| **비교해야 할 하드웨어 천장** | GPU의 **HBM 대역폭 상한 ($\mathrm{BW}$)** | GPU의 **Tensor Core 연산 상한 ($P$)** 및 `cuBLAS` |
+| **비교해야 할 하드웨어 천장** | GPU의 **HBM 대역폭 상한 (`BW`)** | GPU의 **Tensor Core 연산 상한 (`P`)** 및 `cuBLAS` |
 
 4주차 Roofline 그래프를 떠올리면 이유가 명확해진다.
-- 6주차 Softmax는 아무리 잘 결합해도 원소 1개를 읽고 쓸 때 연산을 몇 번 하지 않으므로($I \ll I_{\mathrm{ridge}}$), 성능 천장이 **경사면($\mathrm{BW} \times I$)**에 의해 결정된다. 따라서 최소 필수 이동량(`2MN` 원소 바이트)을 실행시간으로 나눈 유효 대역폭(`GB/s`)이 하드웨어 대역폭 $\mathrm{BW}$에 얼마나 가까운지를 본다.
-- 반면 충분히 큰 행렬곱(`M = N = K = 4096`)은 타일 재사용 덕분에 산술 강도 $I$가 수십~수백 $\text{FLOP/Byte}$로 올라가 **수평 천장($P$, 피크 연산 성능)**의 지배를 받는다([NVIDIA Matrix Multiplication Background](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html#math-mem) 참고). 따라서 총 연산량 $F = 2MNK$($\times 10^{-12}\ \text{TFLOPs}$)를 실행시간 $\mathrm{ms} \times 10^{-3}\ \text{s}$로 나눈 **달성 연산 처리율(`TFLOPs/s`)**을 계산해 GPU의 Tensor Core 피크 성능 및 `torch.matmul`(cuBLAS)과 비교한다.
+- 6주차 Softmax는 아무리 잘 결합해도 원소 1개를 읽고 쓸 때 연산을 몇 번 하지 않으므로(`I << I_ridge`), 성능 천장이 **경사면(`BW × I`)**에 의해 결정된다. 따라서 최소 필수 이동량(`2MN` 원소 바이트)을 실행시간으로 나눈 유효 대역폭(`GB/s`)이 하드웨어 대역폭 `BW`에 얼마나 가까운지를 본다.
+- 반면 충분히 큰 행렬곱(`M = N = K = 4096`)은 타일 재사용 덕분에 산술 강도 `I`가 수십~수백 `FLOP/Byte`로 올라가 **수평 천장(`P`, 피크 연산 성능)**의 지배를 받는다([NVIDIA Matrix Multiplication Background](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html#math-mem) 참고). 따라서 총 연산량 `F = 2MNK`(`× 10⁻¹² TFLOPs`)를 실행시간 `ms × 10⁻³ s`로 나눈 **달성 연산 처리율(`TFLOPs/s`)**을 계산해 GPU의 Tensor Core 피크 성능 및 `torch.matmul`(cuBLAS)과 비교한다.
 
 $$
 \text{달성 연산 처리율 (TFLOPs/s)} = \frac{2 \times M \times N \times K \times 10^{-12}}{\text{실행시간(ms)} \times 10^{-3}}
@@ -1286,7 +1276,7 @@ $$
 
 > **수천 줄짜리 `.asm` 텍스트를 열었을 때 당황하지 않고 읽는 법:**  
 > 처음 `compiled.asm['ttgir']`나 `compiled.asm['ptx']`를 출력해 보면 수백~수천 줄의 주소 계산 코드에 압도당하기 쉽다. 모든 줄을 다 읽으려 하지 말고 **문자열 검색(`Ctrl+F` 또는 파이썬 리스트 컴프리헨션)으로 딱 네 가지 키워드**만 찾아보자.  
-> 1. **`compiled.metadata.shared`**: 내가 손계산한 파이프라인 입력 버퍼 크기($S_{\mathrm{pipe}}$, 예: `30,720 Byte`)와 실제 컴파일러가 할당한 Shared Memory 바이트 수가 일치하는가?  
+> 1. **`compiled.metadata.shared`**: 내가 손계산한 파이프라인 입력 버퍼 크기(`S_pipe`, 예: `30,720 Byte`)와 실제 컴파일러가 할당한 Shared Memory 바이트 수가 일치하는가?  
 > 2. **`ttir`에서 `tt.dot`**: 아직 레이아웃 꼬리표 없이 `tensor<64x32xf16> * tensor<32x32xf16> -> tensor<64x32xf32>`로 적혀 있는가?  
 > 3. **`ttgir`에서 `#mma`, `#shared`, `tt.dot`**: 파일 맨 위에 `#blocked`, `#shared`, `#mma` 레이아웃이 선언되어 있고, `ttg.local_load`와 `tt.dot` 끝에 이 레이아웃들이 붙어 있는가?  
 > 4. **`ptx`에서 `mma.sync`, `ldmatrix`, `cp.async`**: 실제 NVIDIA Tensor Core 행렬곱 명령(`mma.sync...`)과 Shared Memory 로드 명령이 생성되었는가?
@@ -1318,11 +1308,11 @@ $$
 
 ### 9.2 [과제 2 & 3] `M = N = K = 4096` 세 후보의 이동량·Roofline·온칩 버퍼 요약
 
-- **공통 값:** $F = 2 \times 4096^3 = 137{,}438{,}953{,}472\ \text{FLOPs}$, $Q_{\mathrm{write}} = 2 \times 4096^2 = 33{,}554{,}432\ \text{Byte}$, $T_{\mathrm{compute}} = 1.7180\ \text{ms}$ ($P = 80\ \text{TFLOPs/s}$, $\mathrm{BW} = 1\ \text{TB/s}$, $I_{\mathrm{ridge}} = 80\ \text{FLOP/Byte}$).
+- **공통 값:** `F = 2 × 4096³ = 137,438,953,472 FLOPs`, `Q_write = 2 × 4096² = 33,554,432 Byte`, `T_compute = 1.7180 ms` (`P = 80 TFLOPs/s`, `BW = 1 TB/s`, `I_ridge = 80 FLOP/Byte`).
 - **후보별 핵심 수치:**
-  - **후보 1 (`64×32×32, stages=5, warps=2`):** `grid = (8192,)`, K 루프 `128`회, 1단계 `A+B` = `6 KiB`, **파이프라인 버퍼 = `30 KiB`**, FP32 누산기 = `8 KiB`, $Q = 6.476\ \text{GB}$, $I = 21.2228\ \text{FLOP/Byte}$, **$T_{\mathrm{ideal}} = 6.4760\ \text{ms}$ (대역폭 병목)**, `64 KiB` 한계 **통과**.
-  - **후보 2 (`128×128×32, stages=4, warps=4`):** `grid = (1024,)`, K 루프 `128`회, 1단계 `A+B` = `16 KiB`, **파이프라인 버퍼 = `64 KiB`**, FP32 누산기 = `64 KiB`, $Q = 2.181\ \text{GB}$, $I = 63.0154\ \text{FLOP/Byte}$, **$T_{\mathrm{ideal}} = 2.1810\ \text{ms}$ (대역폭 병목)**, `64 KiB` 한계 **경계 통과**.
-  - **후보 3 (`128×256×64, stages=3, warps=8`):** `grid = (512,)`, K 루프 `64`회, 1단계 `A+B` = `48 KiB`, **파이프라인 버퍼 = `144 KiB`**, FP32 누산기 = `128 KiB`, $Q = 1.644\ \text{GB}$, $I = 83.5918\ \text{FLOP/Byte}$, **$T_{\mathrm{ideal}} = 1.7180\ \text{ms}$ (연산 병목 진입)**, `64 KiB` 한계 **초과 (`OutOfResources`)**.
+  - **후보 1 (`64×32×32, stages=5, warps=2`):** `grid = (8192,)`, K 루프 `128`회, 1단계 `A+B` = `6 KiB`, **파이프라인 버퍼 = `30 KiB`**, FP32 누산기 = `8 KiB`, `Q = 6.476 GB`, `I = 21.2228 FLOP/Byte`, **`T_ideal = 6.4760 ms` (대역폭 병목)**, `64 KiB` 한계 **통과**.
+  - **후보 2 (`128×128×32, stages=4, warps=4`):** `grid = (1024,)`, K 루프 `128`회, 1단계 `A+B` = `16 KiB`, **파이프라인 버퍼 = `64 KiB`**, FP32 누산기 = `64 KiB`, `Q = 2.181 GB`, `I = 63.0154 FLOP/Byte`, **`T_ideal = 2.1810 ms` (대역폭 병목)**, `64 KiB` 한계 **경계 통과**.
+  - **후보 3 (`128×256×64, stages=3, warps=8`):** `grid = (512,)`, K 루프 `64`회, 1단계 `A+B` = `48 KiB`, **파이프라인 버퍼 = `144 KiB`**, FP32 누산기 = `128 KiB`, `Q = 1.644 GB`, `I = 83.5918 FLOP/Byte`, **`T_ideal = 1.7180 ms` (연산 병목 진입)**, `64 KiB` 한계 **초과 (`OutOfResources`)**.
 
 ### 9.3 [과제 4] `matmul_kernel` 핵심 구문의 컴파일 단계별 구체화 요약
 
@@ -1715,12 +1705,8 @@ print("CPU 해석기 (5x6x5) allclose 통과:", torch.allclose(c, torch.matmul(a
 
 ### 11.1 오해 1 — “`BLOCK_SIZE_K`(`BK`)를 2배로 키우면 HBM에서 읽는 입력 바이트 수(`Q_read`)도 절반으로 줄어든다?”
 
-- **왜 오해인가:** 6.1절에서 유도했듯, 출력 타일 사이의 캐시 재사용이 없다는 기준선 가정에서 HBM 입력 읽기량은
-  $$
-  Q_{\mathrm{read}} = \left(\frac{M}{\mathrm{BM}}\cdot\frac{N}{\mathrm{BN}}\right) \times \left(\frac{K}{\mathrm{BK}}\right) \times 2(\mathrm{BM}\cdot\mathrm{BK} + \mathrm{BK}\cdot\mathrm{BN}) = 2MNK\left(\frac{1}{\mathrm{BN}} + \frac{1}{\mathrm{BM}}\right)
-  $$
-  이다. `BK`를 `32`에서 `64`로 2배 키우면 한 단계에 읽는 타일 크기가 2배가 되는 대신 K 루프 반복 횟수(`K / BK`)가 정확히 절반으로 줄어들어 두 효과가 상쇄된다.
-- **올바른 설명:** HBM 기준 산술 강도 $I$를 높이는 것은 출력 타일의 두 변인 **`BM`과 `BN`**이다. 반면 `BK`는 루프 반복 횟수, Tensor Core 명령에 한 번에 공급하는 내적 폭, 그리고 **온칩 Shared Memory 버퍼 요구량**을 바꾼다.
+- **왜 오해인가:** 6.1절에서 유도했듯, 출력 타일 사이의 캐시 재사용이 없다는 기준선 가정에서 HBM 입력 읽기량은 `Q_read = ((M / BM) × (N / BN)) × (K / BK) × 2 × (BM × BK + BK × BN) = 2MNK × (1/BN + 1/BM)`이다. `BK`를 `32`에서 `64`로 2배 키우면 한 단계에 읽는 타일 크기가 2배가 되는 대신 K 루프 반복 횟수(`K / BK`)가 정확히 절반으로 줄어들어 두 효과가 상쇄된다.
+- **올바른 설명:** HBM 기준 산술 강도 `I`를 높이는 것은 출력 타일의 두 변인 **`BM`과 `BN`**이다. 반면 `BK`는 루프 반복 횟수, Tensor Core 명령에 한 번에 공급하는 내적 폭, 그리고 **온칩 Shared Memory 버퍼 요구량**을 바꾼다.
 
 ### 11.2 오해 2 — “그룹 순서(`GROUP_SIZE_M`)를 쓰면 커널 안의 `tl.load` 호출 횟수나 연산량 `2MNK`가 줄어든다?”
 
@@ -1730,7 +1716,7 @@ print("CPU 해석기 (5x6x5) allclose 통과:", torch.allclose(c, torch.matmul(a
 ### 11.3 오해 3 — “타일 크기(`BM, BN, BK`)와 파이프라인 단계(`num_stages`)는 크게 잡을수록 무조건 빠르다?”
 
 - **왜 오해인가:**
-  1. 6.3절에서 보았듯 파이프라인 입력 버퍼 크기 $S_{\mathrm{pipe}} = \text{num\_stages} \times 2(\mathrm{BM}\cdot\mathrm{BK} + \mathrm{BK}\cdot\mathrm{BN})$가 GPU의 블록당 최대 Shared Memory(예: `64 KiB`)를 넘으면 아예 `OutOfResources`로 실행조차 되지 않는다.
+  1. 6.3절에서 보았듯 파이프라인 입력 버퍼 크기 `S_pipe = num_stages × 2 × (BM × BK + BK × BN)`가 GPU의 블록당 최대 Shared Memory(예: `64 KiB`)를 넘으면 아예 `OutOfResources`로 실행조차 되지 않는다.
   2. 한계를 넘지 않더라도 블록 하나가 너무 많은 Shared Memory나 레지스터를 점유하면 SM당 동시에 올라갈 수 있는 블록 수(Occupancy)가 급감하거나 레지스터 스필이 발생해 오히려 느려진다.
   3. 입력 행렬 `M, N`이 작을 때(예: `M = N = 256`) `BM = 128, BN = 256`을 쓰면 전체 그리드가 `2 × 1 = 2`개 블록뿐이어서 수십 개의 SM 중 2개만 일하고 나머지는 놀게 된다.
 
@@ -1786,44 +1772,41 @@ Tutorial 03의 `matmul_kernel`로 **`M = 500, N = 600, K = 300`**인 FP16 행렬
 ### 13.1 문제 1 해답 — `500 × 600 × 300` 행렬의 포인터와 마스킹
 
 1. **그리드 크기와 K 루프 반복 횟수:**
-   - $\text{num\_pid\_m} = \lceil 500 / 128 \rceil = \mathbf{4}$ (`pid_m = 0, 1, 2, 3`)
-   - $\text{num\_pid\_n} = \lceil 600 / 128 \rceil = \mathbf{5}$ (`pid_n = 0, 1, 2, 3, 4`)
-   - 전체 프로그램 인스턴스 수: $\mathrm{grid} = (4 \times 5,) = \mathbf{(20,)}$
-   - 인스턴스당 K 루프 반복 횟수: $\lceil 300 / 64 \rceil = \mathbf{5}\text{회}$ (`k = 0, 1, 2, 3, 4`)
+   - `num_pid_m = ceil(500 / 128) =` **`4`** (`pid_m = 0, 1, 2, 3`)
+   - `num_pid_n = ceil(600 / 128) =` **`5`** (`pid_n = 0, 1, 2, 3, 4`)
+   - 전체 프로그램 인스턴스 수: `grid = (4 × 5,) =` **`(20,)`**
+   - 인스턴스당 K 루프 반복 횟수: `ceil(300 / 64) =` **`5`회** (`k = 0, 1, 2, 3, 4`)
 2. **우하단 모서리 타일(`pid_m = 3, pid_n = 4`)의 유효 범위와 마스크:**
-   - `offs_cm = 3 × 128 + arange(0, 128)` = **`384 ~ 511`**
-     - 이 중 `offs_cm < 500`을 만족하는 유효 행은 `384 ~ 499`의 **$500 - 384 = \mathbf{116}$개**이고, 범위 밖 행은 `500 ~ 511`의 `12`개다.
-   - `offs_cn = 4 × 128 + arange(0, 128)` = **`512 ~ 639`**
-     - 이 중 `offs_cn < 600`을 만족하는 유효 열은 `512 ~ 599`의 **$600 - 512 = \mathbf{88}$개**이고, 범위 밖 열은 `600 ~ 639`의 `40`개다.
-   - 따라서 `128 × 128 = 16,384`개 칸 가운데 `c_mask`가 참(`True`)인 실제 유효 출력 원소는 $116 \times 88 = \mathbf{10{,}208}$**개**이고, `c_mask`에 의해 쓰기가 막히는 원소는 $16{,}384 - 10{,}208 = \mathbf{6{,}176}$**개**다.
+   - `offs_cm = 3 × 128 + arange(0, 128) =` **`384 ~ 511`**
+     - 이 중 `offs_cm < 500`을 만족하는 유효 행은 `384 ~ 499`의 `500 - 384 =` **`116`개**이고, 범위 밖 행은 `500 ~ 511`의 `12`개다.
+   - `offs_cn = 4 × 128 + arange(0, 128) =` **`512 ~ 639`**
+     - 이 중 `offs_cn < 600`을 만족하는 유효 열은 `512 ~ 599`의 `600 - 512 =` **`88`개**이고, 범위 밖 열은 `600 ~ 639`의 `40`개다.
+   - 따라서 `128 × 128 = 16,384`개 칸 가운데 `c_mask`가 참(`True`)인 실제 유효 출력 원소는 `116 × 88 =` **`10,208`개**이고, `c_mask`에 의해 쓰기가 막히는 원소는 `16,384 - 10,208 =` **`6,176`개**다.
 3. **마지막 K 단계(`k = 4`)의 K축 마스크:**
-   - 남은 K 원소 수: $K - k \times \mathrm{BK} = 300 - 4 \times 64 = 300 - 256 = \mathbf{44}$
+   - 남은 K 원소 수: `K - k * BK = 300 - 4 × 64 = 300 - 256 =` **`44`**
    - 따라서 `offs_k`(`0 ~ 63`) 가운데 **`0 ~ 43`의 `44`칸**은 `offs_k < 44`가 참(`True`)이 되어 실제 메모리(K 인덱스 `256 ~ 299`)에서 값을 읽고, **`44 ~ 63`의 `20`칸**은 거짓(`False`)이 되어 `other = 0.0`으로 채워진다.
 4. **`% M`·`% N` 모듈로와 `other = 0.0`의 차이:**
-   - 행렬곱 $C_{i, j} = \sum_k A_{i, k} B_{k, j}$에서는 **서로 다른 행 $i$나 서로 다른 열 $j$끼리는 값이 절대 합쳐지지 않고, 오직 $k$ 방향으로만 곱해져 더해진다.** 따라서 `i >= 500`이나 `j >= 600`인 바깥쪽 행·열이 `% 500`, `% 600`으로 0번~11번 행이나 0번~39번 열의 값을 읽어 와 곱하더라도, 그 결과는 `accumulator`의 바깥쪽 칸(`i >= 500` 또는 `j >= 600`)에만 쌓였다가 마지막 `tl.store`에서 `c_mask`에 의해 버려진다.
-   - 반면 $k$ 방향은 유효한 출력 원소 $C_{i, j}$(`i < 500, j < 600`) 하나를 만드는 내적 합계에 직접 더해진다. 만약 마지막 단계(`k = 4`)의 빈자리 `20`칸에 `other = 0.0` 대신 `other = 1.0`을 넣으면, 모든 유효 출력 원소에 $20 \times (1.0 \times 1.0) = \mathbf{20.0}$만큼의 가짜 값이 추가로 더해져 전체 결과가 틀려진다.
+   - 행렬곱 `C[i, j] = sum_k A[i, k] * B[k, j]`에서는 **서로 다른 행 `i`나 서로 다른 열 `j`끼리는 값이 절대 합쳐지지 않고, 오직 `k` 방향으로만 곱해져 더해진다.** 따라서 `i >= 500`이나 `j >= 600`인 바깥쪽 행·열이 `% 500`, `% 600`으로 0번~11번 행이나 0번~39번 열의 값을 읽어 와 곱하더라도, 그 결과는 `accumulator`의 바깥쪽 칸(`i >= 500` 또는 `j >= 600`)에만 쌓였다가 마지막 `tl.store`에서 `c_mask`에 의해 버려진다.
+   - 반면 `k` 방향은 유효한 출력 원소 `C[i, j]`(`i < 500, j < 600`) 하나를 만드는 내적 합계에 직접 더해진다. 만약 마지막 단계(`k = 4`)의 빈자리 `20`칸에 `other = 0.0` 대신 `other = 1.0`을 넣으면, 모든 유효 출력 원소에 `20 × (1.0 × 1.0) =` **`20.0`**만큼의 가짜 값이 추가로 더해져 전체 결과가 틀려진다.
 
 ### 13.2 문제 2 해답 — 8×8 L2 그룹핑과 Shared Memory 한계 판정
 
 1. **8×8 그리드(`K / BK = 8`)에서 `pid = 0 ~ 7`의 비교:**
    - **행 우선 순서(Row-major):** `pid_m = pid // 8`, `pid_n = pid % 8`이므로 `pid = 0 ~ 7`은 **`(0, 0), (0, 1), (0, 2), (0, 3), (0, 4), (0, 5), (0, 6), (0, 7)`**(`1×8` 가로 줄)을 맡는다.
-     - 필요한 `A` 블록 행: `1`개 (`m = 0`) → 타일 $1 \times 8 = 8$개
-     - 필요한 `B` 블록 열: `8`개 (`n = 0 ~ 7`) → 타일 $8 \times 8 = 64$개
-     - 고유 입력 타일 총개수: $(1 + 8) \times 8 = \mathbf{72}$**개**
+     - 필요한 `A` 블록 행: `1`개 (`m = 0`) → 타일 `1 × 8 = 8`개
+     - 필요한 `B` 블록 열: `8`개 (`n = 0 ~ 7`) → 타일 `8 × 8 = 64`개
+     - 고유 입력 타일 총개수: `(1 + 8) × 8 =` **`72`개**
    - **그룹 순서(`GROUP_SIZE_M = 2`):** `num_pid_in_group = 2 × 8 = 16`이므로 `pid = 0 ~ 7`은 `pid_m = pid % 2`, `pid_n = pid // 2`에 따라 `2 × 4` 직사각형 구역에 열 우선으로 배치된다.
      - `pid = 0 → (0, 0)`, `pid = 1 → (1, 0)`
      - `pid = 2 → (0, 1)`, `pid = 3 → (1, 1)`
      - `pid = 4 → (0, 2)`, `pid = 5 → (1, 2)`
      - `pid = 6 → (0, 3)`, `pid = 7 → (1, 3)`
-     - 필요한 `A` 블록 행: `2`개 (`m = 0, 1`) → 타일 $2 \times 8 = 16$개
-     - 필요한 `B` 블록 열: `4`개 (`n = 0, 1, 2, 3`) → 타일 $4 \times 8 = 32$개
-     - 고유 입력 타일 총개수: $(2 + 4) \times 8 = \mathbf{48}$**개**
-   - **감소율:**
-     $$
-     \frac{72 - 48}{72} \times 100\% = \frac{24}{72} \times 100\% \approx \mathbf{33.33\%\ \text{감소}} \quad (72\text{개} \to 48\text{개})
-     $$
+     - 필요한 `A` 블록 행: `2`개 (`m = 0, 1`) → 타일 `2 × 8 = 16`개
+     - 필요한 `B` 블록 열: `4`개 (`n = 0, 1, 2, 3`) → 타일 `4 × 8 = 32`개
+     - 고유 입력 타일 총개수: `(2 + 4) × 8 =` **`48`개**
+   - **감소율:** `(72 - 48) / 72 × 100% = 24 / 72 × 100% ≈` **`33.33%` 감소** (`72개 → 48개`)
 2. **장치별 Shared Memory 한계 판정:**
-   - 세 후보의 파이프라인 입력 버퍼 요구량($S_{\mathrm{pipe}}$)은 각각 **후보 1 = `30 KiB` (`30,720 B`)**, **후보 2 = `64 KiB` (`65,536 B`)**, **후보 3 = `144 KiB` (`147,456 B`)**다.
+   - 세 후보의 파이프라인 입력 버퍼 요구량(`S_pipe`)은 각각 **후보 1 = `30 KiB` (`30,720 B`)**, **후보 2 = `64 KiB` (`65,536 B`)**, **후보 3 = `144 KiB` (`147,456 B`)**다.
    - **장치 가 (최대 `64 KiB`):** 파이프라인 입력 버퍼 기준 **후보 1(`30 KiB`)과 후보 2(`64 KiB`)**가 실행 가능하고, 후보 3(`144 KiB`)은 한계를 초과해 실행할 수 없다(단, 실제 하드웨어에서 컴파일러가 보조 메타데이터 공간을 조금이라도 추가해 후보 2가 `64 KiB`를 넘기면 후보 1만 통과할 수도 있다).
    - **장치 나 (최대 `164 KiB`):** **후보 1, 후보 2, 후보 3 모두** 실행 가능하다.
 3. **장치 가에서의 오토튜닝 동작과 최적 후보:**
@@ -1832,34 +1815,22 @@ Tutorial 03의 `matmul_kernel`로 **`M = 500, N = 600, K = 300`**인 FP16 행렬
 
 ### 13.3 문제 3 해답 — `TFLOPs/s` 해석과 오토튜닝 손익분기점·컴파일 캐시
 
-전체 연산량은 $F = 2 \times 4096^3 = 137{,}438{,}953{,}472\ \mathrm{FLOPs} \approx 137.4390 \times 10^9\ \mathrm{FLOPs}$다.
+전체 연산량은 `F = 2 × 4096³ = 137,438,953,472 FLOPs ≈ 137.4390 × 10⁹ FLOPs`다.
 
 1. **달성 연산 처리율(`TFLOPs/s`)과 속도 배수:**
-   - **고정 설정 (`1.6000 ms`):**
-     $$
-     \frac{137.438953472}{1.6000} \approx \mathbf{85.90\ \mathrm{TFLOPs/s}} \quad (85.8993\ \mathrm{TFLOPs/s})
-     $$
-   - **오토튜닝 최적 설정 (`0.6872 ms`):**
-     $$
-     \frac{137.438953472}{0.6872} \approx \mathbf{200.00\ \mathrm{TFLOPs/s}} \quad (199.9985\ \mathrm{TFLOPs/s})
-     $$
-   - **`torch.matmul` (`0.7000 ms`):**
-     $$
-     \frac{137.438953472}{0.7000} \approx \mathbf{196.34\ \mathrm{TFLOPs/s}} \quad (196.3414\ \mathrm{TFLOPs/s})
-     $$
-   - **속도 배수:** 반복 실행에서 오토튜닝 최적 설정은 고정 설정보다 $1.6000 \div 0.6872 \approx \mathbf{2.33\text{배}}$(`2.3283배`) 빠르고, `torch.matmul`보다 $0.7000 \div 0.6872 \approx \mathbf{1.02\text{배}}$(`1.0186배`) 빠르다.
+   - **고정 설정 (`1.6000 ms`):** `137.438953472 / 1.6000 ≈` **`85.90 TFLOPs/s`** (`85.8993 TFLOPs/s`)
+   - **오토튜닝 최적 설정 (`0.6872 ms`):** `137.438953472 / 0.6872 ≈` **`200.00 TFLOPs/s`** (`199.9985 TFLOPs/s`)
+   - **`torch.matmul` (`0.7000 ms`):** `137.438953472 / 0.7000 ≈` **`196.34 TFLOPs/s`** (`196.3414 TFLOPs/s`)
+   - **속도 배수:** 반복 실행에서 오토튜닝 최적 설정은 고정 설정보다 `1.6000 ÷ 0.6872 ≈` **`2.33배`**(`2.3283배`) 빠르고, `torch.matmul`보다 `0.7000 ÷ 0.6872 ≈` **`1.02배`**(`1.0186배`) 빠르다.
 2. **호출 횟수별 총 소요 시간과 손익분기점:**
    - **딱 1번만 실행할 때:**
-     - 고정 설정: $0 + 1 \times 1.6000 = \mathbf{1.6000\ \mathrm{ms}}$
-     - 오토튜닝 경로: $900 + 1 \times 0.6872 = \mathbf{900.6872\ \mathrm{ms}}$ (초기 탐색 비용 때문에 약 563배 더 오래 걸림)
+     - 고정 설정: `0 + 1 × 1.6000 =` **`1.6000 ms`**
+     - 오토튜닝 경로: `900 + 1 × 0.6872 =` **`900.6872 ms`** (초기 탐색 비용 때문에 약 563배 더 오래 걸림)
    - **1,000번 반복 실행할 때:**
-     - 고정 설정: $1{,}000 \times 1.6000 = \mathbf{1{,}600.0\ \mathrm{ms}}$
-     - 오토튜닝 경로: $900 + 1{,}000 \times 0.6872 = \mathbf{1{,}587.2\ \mathrm{ms}}$ (오토튜닝 경로가 `12.8 ms` 더 짧아짐)
-   - **손익분기점 호출 횟수 $N_{\mathrm{call}}$:**
-     한 번 호출할 때마다 오토튜닝 최적 설정이 $1.6000 - 0.6872 = 0.9128\ \mathrm{ms}$씩 시간을 아끼므로, 초기 탐색 비용 `900 ms`를 회수하려면
-     $$
-     1.6000 \times N_{\mathrm{call}} > 900 + 0.6872 \times N_{\mathrm{call}} \implies N_{\mathrm{call}} > \frac{900}{0.9128} \approx 985.977...
-     $$
+     - 고정 설정: `1,000 × 1.6000 =` **`1,600.0 ms`**
+     - 오토튜닝 경로: `900 + 1,000 × 0.6872 =` **`1,587.2 ms`** (오토튜닝 경로가 `12.8 ms` 더 짧아짐)
+   - **손익분기점 호출 횟수 `N_call`:**
+     한 번 호출할 때마다 오토튜닝 최적 설정이 `1.6000 - 0.6872 = 0.9128 ms`씩 시간을 아끼므로, 초기 탐색 비용 `900 ms`를 회수하려면 `1.6000 × N_call > 900 + 0.6872 × N_call`, 즉 `N_call > 900 / 0.9128 ≈ 985.977...`을 만족해야 한다.
      따라서 최소 **`986회` 이상** 호출할 때부터 오토튜닝 경로의 총 소요 시간이 고정 설정보다 짧아진다(만약 `cache_results=True` 또는 `TRITON_CACHE_AUTOTUNING=1`로 디스크에 튜닝 결과를 저장해 두면 다음 프로세스 실행부터는 이 900 ms 탐색 비용 없이 첫 호출부터 바로 이득을 본다).
 3. **인자 변경 시 `@triton.autotune`과 `@triton.jit` 캐시의 동작:**
    - **① 입력 크기가 `M = N = K = 2048`로 바뀌는 경우:**
@@ -1891,7 +1862,7 @@ Tutorial 03의 `matmul_kernel`로 **`M = 500, N = 600, K = 300`**인 FP16 행렬
 1. 2차원 포인터 블록에서 `A`는 `offs_am[:, None]` + `offs_k[None, :]`(`[BM, BK]`)이고, `B`는 `offs_k[:, None]` + `offs_bn[None, :]`(`[BK, BN]`)으로 축 방향이 바뀐다는 점을 정확히 표시했는가?
 2. `M·N`축의 모듈로(`% M`, `% N`), `K`축의 마스크(`other = 0.0`), 출력 `C`의 `c_mask`가 맡는 역할을 구분하고 왜 `K`축에만 `0.0` 패딩이 필수인지 설명했는가?
 3. 입력·출력 자료형(FP16 = 2 Byte)과 온칩 누산기 자료형(FP32 = 4 Byte)의 바이트 수를 섞지 않고 계산했는가?
-4. 출력 타일 크기(`BM, BN`)가 바꾸는 HBM 이동량($Q_{\mathrm{read}}$)과, `BK`·`num_stages`가 바꾸는 온칩 Shared Memory 파이프라인 버퍼 크기($S_{\mathrm{pipe}}$)를 구분했는가?
+4. 출력 타일 크기(`BM, BN`)가 바꾸는 HBM 이동량(`Q_read`)과, `BK`·`num_stages`가 바꾸는 온칩 Shared Memory 파이프라인 버퍼 크기(`S_pipe`)를 구분했는가?
 5. L2 캐시 그룹핑(`GROUP_SIZE_M`)이 연산량이나 `tl.load` 횟수가 아니라 **동시 작업 구역의 고유 입력 타일 수(L2 캐시 적중률)**를 바꾼다는 점을 설명했는가?
 6. `TTIR`(스레드·레이아웃 미정 블록 IR)과 `TTGIR`(워프·레이아웃·파이프라이닝·Tensor Core가 반영된 GPU IR)의 차이를 구분했는가?
 
@@ -1924,7 +1895,7 @@ Tutorial 03의 `matmul_kernel`로 **`M = 500, N = 600, K = 300`**인 FP16 행렬
 | `TTIR` (`tt` dialect) | 스레드 분할이나 메모리 레이아웃을 아직 정하지 않고 타일(블록) 전체를 하나의 SSA 값으로 다루는 하드웨어 독립적 중간 표현 |
 | `TTGIR` (`ttg` dialect) | `num_warps`와 GPU 특성에 맞춰 텐서마다 분산 레이아웃(`#blocked`, `#shared`, `#mma`, `#dot_op`)을 부여하고 코얼레싱·파이프라이닝·Tensor Core 매핑을 수행하는 GPU 중간 표현 |
 | `PTX` / `CUBIN` (`SASS`) | `PTX`는 NVIDIA의 가상 GPU 어셈블리 텍스트이고, `CUBIN`은 `ptxas`가 이를 실제 하드웨어 명령어(`SASS`)와 물리 레지스터로 어셈블한 실행 바이너리다 |
-| Achieved `TFLOPs/s` (달성 연산 처리율) | 행렬곱의 총 부동소수점 연산량($2MNK \times 10^{-12}$)을 실제 커널 실행시간(초)으로 나눈 값. 연산 병목 커널의 효율을 나타내는 핵심 지표 |
+| Achieved `TFLOPs/s` (달성 연산 처리율) | 행렬곱의 총 부동소수점 연산량(`2MNK × 10⁻¹²`)을 실제 커널 실행시간(초)으로 나눈 값. 연산 병목 커널의 효율을 나타내는 핵심 지표 |
 
 ### 14.5 마지막으로 기억할 핵심 관계
 
@@ -1968,3 +1939,11 @@ Step 4~5. 블록 코드에서 GPU 기계어까지의 다단계 변환 (Compilati
 | **IR 덤프·디버깅** | [Triton GitHub README: Tips for hacking](https://github.com/triton-lang/triton?tab=readme-ov-file#tips-for-hacking) · [Debugging Triton](https://triton-lang.org/main/programming-guide/chapter-3/debugging.html) | `TRITON_KERNEL_DUMP=1`, `TRITON_DUMP_DIR`, `TRITON_PRINT_AUTOTUNING=1`, `MLIR_ENABLE_DUMP=1`, `TRITON_INTERPRET=1` 활용법 (8.3절, 10.2~10.3절) |
 | **행렬곱 성능·PTX 배경** | [NVIDIA Matrix Multiplication Background](https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html#math-mem) · [CUDA PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html) | `2MNK` 연산량과 타일 재사용 산술 강도, 타일·웨이브 양자화, `cp.async`·`ldmatrix`·`mma.sync` 명령 (6절, 7.4절, 8.2절) |
 | **MLIR 컴파일러 배경** | [MLIR Overview](https://mlir.llvm.org/) | 다단계 중간 표현(Multi-Level IR)과 점진적 낮추기(Progressive Lowering)의 설계 목적 (7.1절, 14.3절) |
+
+### 15.3 이 교안의 원자료와 확인한 범위
+
+- [7주차 안내](./%5B7%EC%A3%BC%EC%B0%A8%20%EC%95%88%EB%82%B4%5D%20Tiled%20MatMul%EA%B3%BC%20%EC%BB%B4%ED%8C%8C%EC%9D%BC%20%EA%B3%BC%EC%A0%95.md)와 [7주차 참고자료](./%5B7%EC%A3%BC%EC%B0%A8%20%EC%B0%B8%EA%B3%A0%EC%9E%90%EB%A3%8C%5D%20Tiled%20MatMul%EA%B3%BC%20%EC%BB%B4%ED%8C%8C%EC%9D%BC%20%EA%B3%BC%EC%A0%95%20%EA%B3%84%EC%82%B0%20%EC%98%88%EC%A0%9C%EC%99%80%20%EC%97%B0%EC%8A%B5%EB%AC%B8%EC%A0%9C.md)의 핵심 질문, 5개 정리 주제, 계산 예제 1·2, 연습문제 1·2·3과 해답, 실습 참여 방법, 8주차(Legato) 연결 질문을 빠짐없이 반영했다.
+- [3주차 교안](./%5B3%EC%A3%BC%EC%B0%A8%20%EA%B5%90%EC%95%88%5D%20%EC%BB%A4%EB%84%90%EC%9D%98%20%EC%8B%9C%EA%B0%84%EC%9D%80%20%EC%96%B4%EB%94%94%EC%97%90%EC%84%9C%20%EC%86%8C%EB%B9%84%EB%90%98%EB%8A%94%EA%B0%80.md), [4주차 교안](./%5B4%EC%A3%BC%EC%B0%A8%20%EA%B5%90%EC%95%88%5D%20Roofline%EA%B3%BC%20Tiling.md), [6주차 교안](./%5B6%EC%A3%BC%EC%B0%A8%20%EA%B5%90%EC%95%88%5D%20Python%EC%97%90%EC%84%9C%20Triton%20%EC%BB%A4%EB%84%90%EB%A1%9C.md)에서 정의한 기호(`F`, `Q`, `P`, `BW`, `I`, `I_ridge`, `R_roof`, `T_compute`, `T_memory`, `T_ideal`)와 용어를 일관되게 사용했다.
+- 원자료 검산 과정에서 확인한 세부 보완 사항: [7주차 참고자료] 3.3절(102행)에 적힌 에필로그 결합 절약량 표기(`2MN × 2 Byte × 2회 = 8MN Byte`)는 FP16 원소 크기(`2 Byte`)가 두 번 곱해진 표현이므로, 본문 3.5절에서는 **FP16 중간 텐서 기준 1회 쓰기(`2MN Byte`) + 1회 읽기(`2MN Byte`) = `4MN Byte` 절약**(만약 FP32 중간 텐서로 HBM을 왕복한다면 `8MN Byte` 절약)으로 명확히 구분해 바로잡았다.
+- 외부 공식 자료(Triton Tutorial 03 `.rst.txt` 및 `03-matrix-multiplication.py` 원문 소스, `tl.dot`·`triton.autotune`·`triton.Config` API 문서, Triton MLIR Dialects 및 `TritonGPUDialect` 문서, Triton GitHub `main` 브랜치의 `compiler.py`·NVIDIA 백엔드 `compiler.py`·`autotuner.py`·`README.md`, 2019 MAPL 논문 링크, MLC Modern GPU Programming 성능 장, NVIDIA Matrix Multiplication Background, MLIR 공식 개요 페이지)를 **2026-10-30**에 열람·대조했다.
+- 10.1절의 Python 손계산 검산 코드는 로컬 Python 3(`Python 3.9.13`)에서 직접 실행해 출력과 본문 4절·6절·9절·12~13절의 모든 표·수치가 일치함을 확인했다. 10.2절(GPU 실습 코드)과 10.3절(CPU 해석기 코드)은 로컬 `python3 -m py_compile`로 문법을 검증했으며, GPU 미장착 환경이므로 예상 출력을 실측 로그처럼 기재하지 않았다.
