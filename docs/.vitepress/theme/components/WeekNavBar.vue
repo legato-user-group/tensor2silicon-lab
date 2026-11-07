@@ -1,0 +1,171 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute, withBase } from 'vitepress'
+
+const props = defineProps<{
+  week: number
+  topic: string
+  researchers: Array<{
+    id: string
+    name: string
+    label: string
+    badge?: string
+  }>
+}>()
+
+const route = useRoute()
+
+const weekPrefix = computed(() => `/week0${props.week}`)
+
+function isActive(targetPath: string) {
+  const fullTarget = withBase(targetPath).replace(/\.html$/, '').replace(/\/$/, '')
+  const current = route.path.replace(/\.html$/, '').replace(/\/$/, '')
+  return current === fullTarget
+}
+</script>
+
+<template>
+  <div class="t2s-week-nav">
+    <div class="t2s-week-nav-header">
+      <span class="t2s-week-badge">WEEK 0{{ week }}</span>
+      <span class="t2s-week-topic">{{ topic }}</span>
+    </div>
+    <div class="t2s-week-nav-tabs">
+      <div class="t2s-tab-group main-tabs">
+        <a
+          :href="withBase(`${weekPrefix}/`)"
+          class="t2s-tab"
+          :class="{ active: isActive(`${weekPrefix}/`) || isActive(`${weekPrefix}/index`) }"
+        >
+          📘 메인 교안 (통합본)
+        </a>
+        <a
+          :href="withBase(`${weekPrefix}/guide`)"
+          class="t2s-tab"
+          :class="{ active: isActive(`${weekPrefix}/guide`) }"
+        >
+          🧭 학습 안내 & 계산 예제
+        </a>
+      </div>
+      <div class="t2s-tab-divider"></div>
+      <div class="t2s-tab-group researcher-tabs">
+        <span class="t2s-tab-group-label">🧑‍🔬 연구원 리서치 노트:</span>
+        <a
+          v-for="r in researchers"
+          :key="r.id"
+          :href="withBase(`${weekPrefix}/researchers/${r.id}`)"
+          class="t2s-tab researcher-pill"
+          :class="{ active: isActive(`${weekPrefix}/researchers/${r.id}`) }"
+        >
+          <span>{{ r.name }}</span>
+          <span v-if="r.badge" class="pill-sub">{{ r.badge }}</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.t2s-week-nav {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.t2s-week-nav-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--vp-c-divider);
+}
+
+.t2s-week-badge {
+  background: var(--vp-c-brand-1);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+
+.t2s-week-topic {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--vp-c-text-1);
+}
+
+.t2s-week-nav-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.t2s-tab-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.t2s-tab-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--vp-c-divider);
+  margin: 0 4px;
+}
+
+.t2s-tab-group-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--vp-c-text-2);
+  margin-right: 4px;
+}
+
+.t2s-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  text-decoration: none !important;
+  transition: all 0.15s ease;
+}
+
+.t2s-tab:hover {
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
+  transform: translateY(-1px);
+}
+
+.t2s-tab.active {
+  background: var(--vp-c-brand-soft);
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-brand-1);
+  font-weight: 700;
+}
+
+.pill-sub {
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-3);
+}
+
+.t2s-tab.active .pill-sub {
+  background: var(--vp-c-brand-1);
+  color: #fff;
+}
+</style>

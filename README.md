@@ -5,6 +5,7 @@
 # 🚀 Tensor2Silicon LAB (T2S Lab)
 ### **AI 모델에서 가속기 커널까지 — From Tensor to Silicon**
 
+[![WebBook](https://img.shields.io/badge/📚%20WebBook-Read%20Online%20(GitBook)-2563EB?style=for-the-badge)](https://legato-user-group.github.io/tensor2silicon-lab/)
 [![ModuLabs LAB](https://img.shields.io/badge/ModuLabs-LAB%20%23811-F7585C?style=for-the-badge&logoColor=white)](https://modulabs.co.kr/labs/811)
 [![Organization](https://img.shields.io/badge/Org-Legato%20User%20Group-24292F?style=for-the-badge&logo=github)](https://github.com/legato-user-group)
 [![MSIT / IITP](https://img.shields.io/badge/Supported%20by-MSIT%20%26%20IITP%20(K--Cloud)-004EA2?style=for-the-badge)](https://www.iitp.kr)

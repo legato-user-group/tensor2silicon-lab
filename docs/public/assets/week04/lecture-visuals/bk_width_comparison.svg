@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1008pt" height="1008pt" viewBox="0 0 1008 1008" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-04T20:46:24.192485</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.5.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 1008 
+L 1008 1008 
+L 1008 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 48.384 447.552 
+L 959.616 447.552 
+Q 971.712 447.552 971.712 435.456 
+L 971.712 149.184 
+Q 971.712 137.088 959.616 137.088 
+L 48.384 137.088 
+Q 36.288 137.088 36.288 149.184 
+L 36.288 435.456 
+Q 36.288 447.552 48.384 447.552 
+z
+" clip-path="url(#pb827aa47e6)" style="fill: #f7f9fc; stroke: #dfe5ec; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 100.8 370.944 
+L 165.312 370.944 
+L 165.312 241.92 
+L 100.8 241.92 
+z
+" clip-path="url(#pb827aa47e6)" style="fill: #dbeafe; stroke: #2563aa; stroke-width: 1.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 302.4 306.432 
+L 431.424 306.432 
+L 431.424 241.92 
+L 302.4 241.92 
+z
+" clip-path="url(#pb827aa47e6)" style="fill: #fff0cc; stroke: #a36500; stroke-width: 1.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 544.32 370.944 
+L 673.344 370.944 
+L 673.344 241.92 
+L 544.32 241.92 
+z
+" clip-path="url(#pb827aa47e6)" style="fill: #ddf3e7; stroke: #247249; stroke-width: 1.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 48.384 780.192 
+L 959.616 780.192 
+Q 971.712 780.192 971.712 768.096 
+L 971.712 481.824 
+Q 971.712 469.728 959.616 469.728 
+L 48.384 469.728 
+Q 36.288 469.728 36.288 481.824 
+L 36.288 768.096 
+Q 36.288 780.192 48.384 780.192 
+z
+" clip-path="url(#pb827aa47e6)" style="fill: #f7f9fc; stroke: #dfe5ec; stroke-width: 1.1; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 100.8 703.584 
+L 229.824 703.584 
+L 229.824 574.56 
+L 100.8 574.56 
+z
+" clip-path="url(#pb827aa47e6)" style="fill: #dbeafe; stroke: #2563aa; stroke-width: 1.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 302.4 703.584 
+L 431.424 703.584 
+L 431.424 574.56 
+L 302.4 574.56 
+z
+" clip-path="url(#pb827aa47e6)" style="fill: #fff0cc; stroke: #a36500; stroke-width: 1.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 544.32 703.584 
+L 673.344 703.584 
+L 673.344 574.56 
+L 544.32 574.56 
+z
+" clip-path="url(#pb827aa47e6)" style="fill: #ddf3e7; stroke: #247249; stroke-width: 1.8; stroke-linejoin: miter"/>
+   </g>
+   <g id="line2d_1">
+    <path d="M 133.056 370.944 
+L 133.056 241.92 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 100.8 338.688 
+L 165.312 338.688 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_3">
+    <path d="M 100.8 306.432 
+L 165.312 306.432 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_4">
+    <path d="M 100.8 274.176 
+L 165.312 274.176 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_5">
+    <path d="M 334.656 306.432 
+L 334.656 241.92 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_6">
+    <path d="M 366.912 306.432 
+L 366.912 241.92 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_7">
+    <path d="M 399.168 306.432 
+L 399.168 241.92 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_8">
+    <path d="M 302.4 274.176 
+L 431.424 274.176 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_9">
+    <path d="M 576.576 370.944 
+L 576.576 241.92 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_10">
+    <path d="M 608.832 370.944 
+L 608.832 241.92 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_11">
+    <path d="M 641.088 370.944 
+L 641.088 241.92 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_12">
+    <path d="M 544.32 338.688 
+L 673.344 338.688 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_13">
+    <path d="M 544.32 306.432 
+L 673.344 306.432 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_14">
+    <path d="M 544.32 274.176 
+L 673.344 274.176 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_15">
+    <path d="M 70.56 387.072 
+L 937.44 387.072 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #dfe5ec; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_16">
+    <path d="M 133.056 703.584 
+L 133.056 574.56 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_17">
+    <path d="M 165.312 703.584 
+L 165.312 574.56 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_18">
+    <path d="M 197.568 703.584 
+L 197.568 574.56 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_19">
+    <path d="M 100.8 671.328 
+L 229.824 671.328 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_20">
+    <path d="M 100.8 639.072 
+L 229.824 639.072 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_21">
+    <path d="M 100.8 606.816 
+L 229.824 606.816 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #2563aa; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_22">
+    <path d="M 334.656 703.584 
+L 334.656 574.56 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_23">
+    <path d="M 366.912 703.584 
+L 366.912 574.56 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_24">
+    <path d="M 399.168 703.584 
+L 399.168 574.56 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_25">
+    <path d="M 302.4 671.328 
+L 431.424 671.328 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_26">
+    <path d="M 302.4 639.072 
+L 431.424 639.072 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_27">
+    <path d="M 302.4 606.816 
+L 431.424 606.816 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #a36500; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_28">
+    <path d="M 576.576 703.584 
+L 576.576 574.56 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_29">
+    <path d="M 608.832 703.584 
+L 608.832 574.56 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_30">
+    <path d="M 641.088 703.584 
+L 641.088 574.56 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_31">
+    <path d="M 544.32 671.328 
+L 673.344 671.328 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_32">
+    <path d="M 544.32 639.072 
+L 673.344 639.072 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_33">
+    <path d="M 544.32 606.816 
+L 673.344 606.816 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #247249; stroke-opacity: 0.28; stroke-width: 0.65; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_34">
+    <path d="M 70.56 719.712 
+L 937.44 719.712 
+" clip-path="url(#pb827aa47e6)" style="fill: none; stroke: #dfe5ec; stroke-linecap: square"/>
+   </g>
+   <g id="text_1">
+    <text style="fill: #18283b; font: 700 24px 'Noto Sans CJK JP'; text-anchor: start" x="50.4" y="42.7575" transform="rotate(-0, 50.4, 42.7575)">BK가 두 배면 입력 버퍼도 두 배, 단계 수는 절반</text>
+   </g>
+   <g id="text_2">
+    <text style="fill: #526273; font: 13.2px 'Noto Sans CJK JP'; text-anchor: start" x="50.4" y="76.317375" transform="rotate(-0, 50.4, 76.317375)">FP32 · K = 4096 · 두 패널의 도형은 같은 축척 · 개념도, 실측 결과 아님</text>
+   </g>
+   <g id="text_3">
+    <text style="fill: #18283b; font: 700 18px 'Noto Sans CJK JP'; text-anchor: start" x="70.56" y="176.606719" transform="rotate(-0, 70.56, 176.606719)">BK = 32</text>
+   </g>
+   <g id="text_4">
+    <text style="fill: #526273; font: 13px 'Noto Sans CJK JP'; text-anchor: start" x="292.32" y="175.044688" transform="rotate(-0, 292.32, 175.044688)">출력 타일 BM = BN = 64 고정</text>
+   </g>
+   <g id="text_5">
+    <text style="fill: #2563aa; font: 700 12.2px 'Noto Sans CJK JP'; text-anchor: middle" x="133.056" y="223.324891" transform="rotate(-0, 133.056, 223.324891)">A[64, 32]</text>
+   </g>
+   <g id="text_6">
+    <text style="fill: #a36500; font: 700 12.2px 'Noto Sans CJK JP'; text-anchor: middle" x="366.912" y="223.324891" transform="rotate(-0, 366.912, 223.324891)">B[32, 64]</text>
+   </g>
+   <g id="text_7">
+    <text style="fill: #247249; font: 700 12.2px 'Noto Sans CJK JP'; text-anchor: middle" x="608.832" y="223.324891" transform="rotate(-0, 608.832, 223.324891)">acc[64, 64]</text>
+   </g>
+   <g id="text_8">
+    <text style="fill: #526273; font: 27px 'Noto Sans CJK JP'; text-anchor: middle" x="252" y="314.084812" transform="rotate(-0, 252, 314.084812)">×</text>
+   </g>
+   <g id="text_9">
+    <text style="fill: #526273; font: 27px 'Noto Sans CJK JP'; text-anchor: middle" x="483.84" y="314.084812" transform="rotate(-0, 483.84, 314.084812)">→</text>
+   </g>
+   <g id="text_10">
+    <text style="fill: #18283b; font: 700 12.8px 'Noto Sans CJK JP'; text-anchor: start" x="725.76" y="260.771" transform="rotate(-0, 725.76, 260.771)">단계당 입력 버퍼  16 KiB</text>
+   </g>
+   <g id="text_11">
+    <text style="fill: #18283b; font: 13.5px 'Noto Sans CJK JP'; text-anchor: start" x="725.76" y="304.210406" transform="rotate(-0, 725.76, 304.210406)">K 단계  128회</text>
+   </g>
+   <g id="text_12">
+    <text style="fill: #247249; font: 12.5px 'Noto Sans CJK JP'; text-anchor: start" x="725.76" y="347.270969" transform="rotate(-0, 725.76, 347.270969)">타일 전체 누산값  16 KiB</text>
+   </g>
+   <g id="text_13">
+    <text style="fill: #526273; font: 12.8px 'Noto Sans CJK JP'; text-anchor: start" x="70.56" y="418.924" transform="rotate(-0, 70.56, 418.924)">출력 타일 하나의 누적 입력 읽기</text>
+   </g>
+   <g id="text_14">
+    <text style="fill: #18283b; font: 700 16px 'Noto Sans CJK JP'; text-anchor: start" x="554.4" y="419.95975" transform="rotate(-0, 554.4, 419.95975)">16 KiB × 128 = 2 MiB</text>
+   </g>
+   <g id="text_15">
+    <text style="fill: #18283b; font: 700 18px 'Noto Sans CJK JP'; text-anchor: start" x="70.56" y="509.246719" transform="rotate(-0, 70.56, 509.246719)">BK = 64</text>
+   </g>
+   <g id="text_16">
+    <text style="fill: #526273; font: 13px 'Noto Sans CJK JP'; text-anchor: start" x="292.32" y="507.684687" transform="rotate(-0, 292.32, 507.684687)">출력 타일 BM = BN = 64 고정</text>
+   </g>
+   <g id="text_17">
+    <text style="fill: #2563aa; font: 700 12.2px 'Noto Sans CJK JP'; text-anchor: middle" x="165.312" y="555.964891" transform="rotate(-0, 165.312, 555.964891)">A[64, 64]</text>
+   </g>
+   <g id="text_18">
+    <text style="fill: #a36500; font: 700 12.2px 'Noto Sans CJK JP'; text-anchor: middle" x="366.912" y="555.964891" transform="rotate(-0, 366.912, 555.964891)">B[64, 64]</text>
+   </g>
+   <g id="text_19">
+    <text style="fill: #247249; font: 700 12.2px 'Noto Sans CJK JP'; text-anchor: middle" x="608.832" y="555.964891" transform="rotate(-0, 608.832, 555.964891)">acc[64, 64]</text>
+   </g>
+   <g id="text_20">
+    <text style="fill: #526273; font: 27px 'Noto Sans CJK JP'; text-anchor: middle" x="252" y="646.724812" transform="rotate(-0, 252, 646.724812)">×</text>
+   </g>
+   <g id="text_21">
+    <text style="fill: #526273; font: 27px 'Noto Sans CJK JP'; text-anchor: middle" x="483.84" y="646.724812" transform="rotate(-0, 483.84, 646.724812)">→</text>
+   </g>
+   <g id="text_22">
+    <text style="fill: #18283b; font: 700 12.8px 'Noto Sans CJK JP'; text-anchor: start" x="725.76" y="593.411" transform="rotate(-0, 725.76, 593.411)">단계당 입력 버퍼  32 KiB</text>
+   </g>
+   <g id="text_23">
+    <text style="fill: #18283b; font: 13.5px 'Noto Sans CJK JP'; text-anchor: start" x="725.76" y="636.850406" transform="rotate(-0, 725.76, 636.850406)">K 단계  64회</text>
+   </g>
+   <g id="text_24">
+    <text style="fill: #247249; font: 12.5px 'Noto Sans CJK JP'; text-anchor: start" x="725.76" y="679.910969" transform="rotate(-0, 725.76, 679.910969)">타일 전체 누산값  16 KiB</text>
+   </g>
+   <g id="text_25">
+    <text style="fill: #526273; font: 12.8px 'Noto Sans CJK JP'; text-anchor: start" x="70.56" y="751.564" transform="rotate(-0, 70.56, 751.564)">출력 타일 하나의 누적 입력 읽기</text>
+   </g>
+   <g id="text_26">
+    <text style="fill: #18283b; font: 700 16px 'Noto Sans CJK JP'; text-anchor: start" x="554.4" y="752.59975" transform="rotate(-0, 554.4, 752.59975)">32 KiB × 64 = 2 MiB</text>
+   </g>
+   <g id="text_27">
+    <text style="fill: #18283b; font: 700 17px 'Noto Sans CJK JP'; text-anchor: start" x="50.4" y="824.459234" transform="rotate(-0, 50.4, 824.459234)">두 경우의 전체 HBM 이동량은 같다</text>
+   </g>
+   <g id="text_28">
+    <text style="fill: #18283b; font: 15px 'Noto Sans CJK JP'; text-anchor: start" x="50.4" y="859.268766" transform="rotate(-0, 50.4, 859.268766)">2 MiB × 4,096개 출력 타일 + 출력 쓰기 64 MiB = 8,657,043,456 Byte</text>
+   </g>
+   <g id="text_29">
+    <text style="fill: #18283b; font: 13.5px 'Noto Sans CJK JP'; text-anchor: start" x="50.4" y="895.074539" transform="rotate(-0, 50.4, 895.074539)">F와 Q가 같으므로 산술 강도 I도 같다 (약 15.8760 FLOP/Byte).</text>
+   </g>
+   <g id="text_30">
+    <text style="fill: #526273; font: 13.2px 'Noto Sans CJK JP'; text-anchor: start" x="50.4" y="926.061375" transform="rotate(-0, 50.4, 926.061375)">실제 실행시간은 버퍼 사용량·명령 구성·반복 비용 등에 따라 달라질 수 있다.</text>
+   </g>
+   <g id="text_31">
+    <text style="fill: #526273; font: 11.8px 'Noto Sans CJK JP'; text-anchor: start" x="50.4" y="962.960563" transform="rotate(-0, 50.4, 962.960563)">가정: 단일 단계 입력 버퍼 · 출력 타일 간 캐시 재사용 없음 · 누산값 온칩 유지</text>
+   </g>
+   <g id="text_32">
+    <text style="fill: #526273; font: 11.8px 'Noto Sans CJK JP'; text-anchor: start" x="50.4" y="988.160562" transform="rotate(-0, 50.4, 988.160562)">출력 C는 마지막에 한 번만 쓴다. 입력 버퍼와 누산값의 저장량을 따로 센다.</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pb827aa47e6">
+   <rect x="0" y="0" width="1008" height="1008"/>
+  </clipPath>
+ </defs>
+</svg>

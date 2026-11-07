@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark">
+<title>AI Compiler | 한 줄의 컴파일 과정</title><style>
+/* Diagram-led presentation. Native CSS; no marketing-site framework or decorative assets.
+   Layer scale: routes 0, task nodes 1, travelling artifact 2, dialogs native top layer.
+   Radius scale: controls 8px, code and process blocks 14px. */
+:root{color-scheme:light;--bg:#f6f5f1;--surface:#fffefb;--subtle:#ecebe5;--ink:#1d2129;--muted:#5f6571;--line:#dcdad2;--dot:#d6d3c8;--accent:#2f5bd3;--tint:#e8eefc;--shadow:#2a3a6a1f;font-family:"SF Pro Display","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;background:var(--subtle);color:var(--ink)}
+:root[data-theme=dark]{color-scheme:dark;--bg:#15171c;--surface:#1d2027;--subtle:#101216;--ink:#eceef3;--muted:#a3aab8;--line:#333844;--dot:#2a2f3a;--accent:#8fb0ff;--tint:#232f4a;--shadow:#05070c80}
+*{box-sizing:border-box}body{margin:0}button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;white-space:nowrap}button:active{scale:.98}button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:4px}button:disabled{opacity:.3;cursor:default}[hidden]{display:none!important}ul{margin:0;padding-left:20px}li::marker{color:var(--accent)}#viewport{height:100dvh;position:relative;overflow:hidden}#deck{width:1600px;height:1000px;position:absolute;left:50%;top:50%;transform-origin:center;background:var(--bg);overflow:hidden}.topbar{position:absolute;top:0;left:64px;right:64px;height:84px;display:flex;align-items:center;gap:18px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:13px;font-size:19px;font-weight:700;padding:0}.brand-mark{background:var(--ink);color:var(--bg);border-radius:8px;width:32px;height:32px;display:grid;place-items:center;font-size:23px;letter-spacing:-2px;padding-right:2px}#stage-nav{display:flex;gap:2px;margin:auto}#stage-nav button{font-size:13px;padding:10px 13px;color:var(--muted);border-radius:8px}#stage-nav button[aria-current=step]{color:var(--accent);background:var(--tint);font-weight:650}.topbar>button:not(.brand){font-size:12px;color:var(--muted);padding:8px 4px}.topbar button:hover{color:var(--accent)}
+#overview{position:absolute;inset:135px 80px 115px}.overview-heading h1{font-size:52px;letter-spacing:-2px;line-height:1.15;margin:0 0 20px;font-weight:650}.overview-heading ul{font-size:20px;color:var(--muted)}.hero-formula{position:absolute;right:0;top:0;border-left:3px solid var(--accent);padding:8px 0 8px 32px}.hero-formula span{display:block;font-size:14px;color:var(--muted);margin-bottom:18px}.hero-formula code{font:33px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:-1.4px}.hero-formula b{color:var(--accent);font-weight:500}#journey-map{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:68px 34px;margin-top:92px}.map-step{position:relative;min-height:160px;text-align:left;padding:27px 24px;background:var(--surface);border:1px solid var(--line);border-radius:14px;transition:transform .2s,border-color .2s}.map-step:hover{transform:translateY(-4px);border-color:var(--accent)}.map-step h2{font-size:24px;letter-spacing:-.7px;margin:0 0 22px;font-weight:650}.map-step p{font:13px ui-monospace,monospace;margin:0;color:var(--muted)}.map-step p:before{content:'→ ';color:var(--accent)}.map-step:not(:nth-child(4)):not(:nth-child(7)):after{content:'→';position:absolute;right:-27px;top:70px;color:var(--accent);font-size:20px}.map-step.runtime{border-color:var(--accent);background:var(--tint)}.map-connector{position:absolute;inset:0;width:100%;height:388px;pointer-events:none;fill:none;stroke:var(--line);stroke-width:2}.map-end{display:flex;flex-direction:column;justify-content:center;padding-left:27px;border-left:2px solid var(--accent);gap:20px}.map-end code{font:28px ui-monospace,monospace;color:var(--accent)}.map-end ul{font-size:15px;color:var(--muted)}.overview-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:64px;font-size:15px;line-height:1.9;color:var(--muted)}.primary{background:var(--accent);color:var(--surface);padding:18px 32px;border-radius:8px;font-size:17px}:root[data-theme=dark] .primary{color:#171a21}
+.slide-heading{position:absolute;left:70px;right:70px;top:123px;display:flex;align-items:flex-start;justify-content:space-between}.slide-heading h1{font-size:48px;font-weight:650;letter-spacing:-1.8px;line-height:1.15;margin:0 0 16px}.slide-heading ul{font-size:18px;color:var(--muted)}#stage-owner{font-size:13px;color:var(--muted);padding-top:12px}.lane-label{position:absolute;top:240px;font:12px ui-monospace,monospace;color:var(--muted);letter-spacing:1px}.lane-label span{font:12px "Apple SD Gothic Neo",system-ui,sans-serif;letter-spacing:0;margin-left:16px;opacity:.9}.input-label{left:70px}.process-label{left:690px}.result-label{left:965px}#input-preview{position:absolute;left:70px;top:284px;width:540px;padding:25px;background:var(--surface);border:1px solid var(--line);border-radius:14px;opacity:.5;transition:opacity .35s}#input-preview h2{font-size:17px;margin:0 0 22px;font-weight:600}#input-code{font:15px/1.9 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;white-space:pre;letter-spacing:-.4px}#input-preview.waiting{opacity:0}#routes{position:absolute;inset:0;width:1600px;height:1000px;pointer-events:none;fill:none;stroke:var(--line);stroke-width:2}#active-route{stroke:var(--accent);stroke-width:2.5;transition:opacity .3s}#steps{position:absolute;inset:0;pointer-events:none}#steps button{position:absolute;left:680px;width:220px;height:102px;text-align:left;padding:21px 22px;background:var(--surface);border:1px solid var(--line);border-radius:14px;pointer-events:auto;z-index:1;transition:background .3s,border-color .3s,transform .3s}#steps button strong{display:block;font-size:19px;font-weight:600;letter-spacing:-.5px}#steps button small{display:block;font-size:11px;color:var(--muted);margin-top:12px}#steps button.active{background:var(--tint);border:2px solid var(--accent);transform:translateX(5px)}#steps button.active strong{color:var(--accent)}#steps button.done{border-color:var(--accent)}#steps button.done small{color:var(--accent)}#steps button:hover{border-color:var(--accent)}#output-dock{position:absolute;left:965px;top:891px;width:560px;display:flex;justify-content:space-between;color:var(--muted);font-size:12px}#output-dock span:first-child{font-family:ui-monospace,monospace;color:var(--accent)}#explanation{position:absolute;left:70px;top:671px;width:530px}#explain-tag{display:block;font-size:13px;color:var(--accent);margin-bottom:14px}#explain-title{font-size:27px;letter-spacing:-.8px;font-weight:600;margin:0 0 20px;line-height:1.35;word-break:keep-all}#explain-detail{font-size:17px;line-height:1.85;color:var(--muted);padding-left:19px}#handoff-hint{font-size:13px;color:var(--accent);margin-top:20px}#handoff-hint:empty{display:none}
+#artifact{position:absolute;left:0;top:0;width:560px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 14px 38px var(--shadow);z-index:2;transform:translate(70px,284px);transition:transform 760ms cubic-bezier(.22,.8,.2,1);will-change:transform}#artifact[data-place=input]{transform:translate(70px,284px)}#artifact[data-place=work]{transform:translate(965px,var(--card-y,284px));border-color:var(--accent)}#artifact[data-place=output]{transform:translate(965px,525px);border-color:var(--accent)}.artifact-head{display:flex;align-items:center;justify-content:space-between;padding:15px 24px;border-bottom:1px solid var(--line);font:11px ui-monospace,monospace;letter-spacing:.7px}#artifact-role{color:var(--accent)}#artifact-kind{color:var(--muted)}#artifact-content{padding:23px 24px 19px}#artifact-name{font-size:20px;letter-spacing:-.5px;font-weight:600;margin:0 0 20px}#artifact-code{font:15.5px/1.75 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:-.45px;margin:0;white-space:pre}.code-line{display:block;min-height:27px;padding:0 5px;border-left:2px solid transparent}.code-line.highlight{background:var(--tint);border-color:var(--accent)}.code-line.comment{color:var(--muted)}.line-number{display:inline-block;width:24px;font-size:10px;user-select:none;color:var(--muted);opacity:.7;letter-spacing:0}#artifact-content>ul{padding-left:15px;margin-top:20px;font-size:11px;line-height:1.6;color:var(--muted)}#mini-graph{display:flex;gap:6px;align-items:center;margin-bottom:20px}#mini-graph:empty{display:none}.graph-node{padding:5px 7px;border:1px solid var(--line);border-radius:5px;font:10px ui-monospace,monospace;white-space:nowrap}.graph-node.fused{border-color:var(--accent);background:var(--tint);color:var(--accent)}.graph-arrow{font-size:11px;color:var(--muted)}footer{position:absolute;left:64px;right:64px;bottom:15px;height:55px;border-top:1px solid var(--line);display:flex;align-items:center;gap:25px}#position{font:13px ui-monospace,monospace;color:var(--accent)}#footer-hint{font-size:13px;color:var(--muted)}.controls{margin-left:auto;display:flex;align-items:center;gap:9px}.controls>span{font-size:12px;color:var(--muted);margin-right:12px}.controls button{width:44px;height:35px;border:1px solid var(--line);border-radius:8px;font-size:20px}.controls #next{border-color:var(--accent);background:var(--accent);color:var(--surface)}:root[data-theme=dark] .controls #next{color:#171a21}dialog{width:min(650px,92vw);max-height:85dvh;overflow:auto;padding:40px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink)}dialog::backdrop{background:#10172688}dialog h2{font-size:27px;margin:0 0 25px}#close-sources{position:absolute;right:20px;top:20px;font-size:13px;color:var(--muted)}.scope,.dialog-note{font-size:14px;line-height:1.9;color:var(--muted)}#source-links a{display:block;color:var(--accent);font-size:16px;margin-top:23px}#source-links small{display:block;color:var(--muted);font-size:12px;margin-top:6px}.dialog-note{margin-top:30px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+/* Fixed presentation aspect ratio on small screens; no reflow of the spatial story. */
+@media(max-width:767px){#viewport{min-height:100dvh}.topbar{gap:15px}}
+#artifact[data-place=output]{transform:translate(1000px,525px)}
+#output-dock{left:1000px;width:560px;top:909px}
+#input-preview{opacity:1;color:var(--muted);background:var(--subtle)}
+#input-preview.waiting{opacity:0}
+.line-number,.lane-label span{opacity:1}
+
+/* Visual polish: paper + dot grid, numbered nodes, code card bands. Geometry untouched. */
+#deck{background:radial-gradient(circle,var(--dot) 1px,transparent 1.2px) 0 0/24px 24px,var(--bg)}
+h1,h2,#explain-title{text-wrap:balance}
+.topbar,footer{background:var(--bg)}
+#stage-nav button{transition:color .2s,background .2s}#stage-nav button:hover{background:var(--subtle);color:var(--ink)}
+.overview-heading h1{font-weight:750;letter-spacing:-2.4px}.slide-heading h1{font-weight:720;letter-spacing:-2px}
+.overview-heading ul,.slide-heading ul{list-style:none;padding:0}
+#journey-map{counter-reset:stage}
+.map-step{counter-increment:stage;box-shadow:0 1px 0 var(--line);transition:transform .25s cubic-bezier(.22,.8,.2,1),border-color .2s,box-shadow .25s}
+.map-step:before{content:counter(stage,decimal-leading-zero);position:absolute;right:22px;top:24px;font:600 12px ui-monospace,monospace;color:var(--muted);letter-spacing:.5px}
+.map-step:hover{box-shadow:0 18px 36px -18px var(--shadow)}
+.map-end code{white-space:pre;line-height:1.35}
+.primary{box-shadow:0 10px 24px -10px var(--accent);transition:transform .2s,box-shadow .2s}.primary:hover{transform:translateY(-2px)}
+.lane-label:before{content:'';display:inline-block;width:6px;height:6px;border-radius:2px;background:var(--accent);margin-right:10px;vertical-align:1px}
+#input-preview{border-style:dashed}
+#steps{counter-reset:task}
+#steps button{counter-increment:task;padding-left:60px;box-shadow:0 1px 0 var(--line)}
+#steps button:before{content:counter(task);position:absolute;left:20px;top:22px;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font:600 12px ui-monospace,monospace;background:var(--subtle);color:var(--muted);transition:background .3s,color .3s}
+#steps button.active:before{background:var(--accent);color:var(--surface)}
+#steps button.done:before{content:'✓';background:var(--tint);color:var(--accent)}
+#steps button.active{box-shadow:0 16px 32px -18px var(--accent)}
+#artifact{overflow:hidden;box-shadow:0 1px 0 var(--line),0 28px 60px -28px var(--shadow)}
+.artifact-head{background:var(--subtle)}
+.artifact-head:before{content:'';width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:10px}
+#artifact-role{margin-right:auto}
+.graph-node{background:var(--surface)}
+#explain-tag{font:600 12px ui-monospace,monospace;letter-spacing:.6px;text-transform:uppercase}
+.controls button{transition:transform .15s,background .2s,border-color .2s}.controls button:not(:disabled):hover{border-color:var(--accent)}
+:root[data-theme=dark] #steps button.active:before{color:#15171c}
+
+</style>
+
+</head><body>
+<main id="viewport" aria-label="AI Compiler 발표"><div id="deck">
+<header class="topbar"><button id="home" class="brand" aria-label="전체 지도"><span class="brand-mark">aı</span><span>AI Compiler</span></button><nav id="stage-nav" aria-label="슬라이드 선택"></nav><button id="theme" aria-label="밝기 전환">테마</button><button id="sources">범위 & 출처</button><button id="fullscreen" aria-label="전체화면 전환">전체화면</button></header>
+<section id="overview" aria-labelledby="overview-title">
+<div class="overview-heading"><h1 id="overview-title">한 줄의 컴파일 과정</h1><ul><li>수식 하나가 단계마다 바뀌는 모습</li></ul></div>
+<div class="hero-formula"><span>Python source</span><code>y = <b>relu</b>(linear(X))</code></div>
+<div id="journey-map" aria-label="전체 컴파일 파이프라인"></div>
+<div class="overview-bottom"><ul><li>NVIDIA GPU 대표 경로</li><li>외부 GEMM + 생성 pointwise 커널</li></ul><button id="start" class="primary">발표 시작 →</button></div>
+</section>
+<section id="stage" hidden aria-labelledby="stage-title">
+<div class="slide-heading"><div><h1 id="stage-title"></h1><ul><li id="stage-subtitle"></li></ul></div><span id="stage-owner"></span></div>
+<div id="pipeline-surface">
+<div class="lane-label input-label">INPUT<span id="input-origin"></span></div>
+<div class="lane-label process-label">SUBTASKS<span>처리 순서</span></div>
+<div class="lane-label result-label">TRANSFORMATION<span>현재 표현</span></div>
+<article id="input-preview" aria-label="슬라이드 입력 원본"><h2 id="input-name"></h2><pre id="input-code"></pre></article>
+<svg id="routes" viewBox="0 0 1600 1000" aria-hidden="true"><path id="entry-route"/><path id="spine-route"/><path id="exit-route"/><path id="active-route"/></svg>
+<nav id="steps" aria-label="현재 슬라이드의 작업 블록"></nav>
+<div id="output-dock"><span>OUTPUT</span><span id="next-stage-label"></span></div>
+</div>
+<aside id="explanation"><span id="explain-tag"></span><h2 id="explain-title"></h2><ul id="explain-detail"></ul><div id="handoff-hint"></div></aside>
+</section>
+<article id="artifact" hidden aria-label="이동 중인 코드와 IR">
+<div class="artifact-head"><span id="artifact-role"></span><span id="artifact-kind"></span></div>
+<div id="artifact-content"><h2 id="artifact-name"></h2><div id="mini-graph" aria-label="연산 의존 관계"></div><pre id="artifact-code"></pre><ul><li id="artifact-foot"></li></ul></div>
+</article>
+<footer><div id="position"></div><div id="footer-hint"></div><div class="controls"><span>← 이전 / 다음 →</span><button id="previous" aria-label="이전 단계">←</button><button id="next" aria-label="다음 단계">→</button></div></footer>
+</div></main>
+<dialog id="source-dialog" aria-labelledby="source-title"><button id="close-sources" aria-label="출처 닫기">닫기</button><h2 id="source-title">범위 & 출처</h2><ul class="scope"><li>경로: PyTorch → Inductor → Triton → NVIDIA GPU (교육용 대표 경로)</li><li>모든 IR·코드: 교육용 축약, 인수·타입 일부 생략</li><li>실제 최적화 결과: 버전·장치·shape·옵션마다 상이</li><li>FakeTensor: Dynamo가 생성, AOTAutograd가 재사용, 이후 단계는 meta["val"] 참조</li><li>ATen 변환 + decomposition: AOTAutograd 추적 중 동시 적용, linear → permute + addmm</li><li>addmm → mm + add: GPU post-grad pass, CPU는 addmm 유지</li><li>GEMM: 외부 라이브러리 호출, add + relu: 생성 커널</li><li>생략: backward, graph break</li></ul><div id="source-links"></div><ul class="dialog-note"><li>← → / Space: 단계 이동</li><li>Home·Esc: 전체 지도 / End: 마지막 결과</li><li>F: 전체화면</li></ul></dialog>
+<p id="announcement" class="sr-only" aria-live="polite" aria-atomic="true"></p><noscript>슬라이드 실행에 JavaScript 필요</noscript>
+<script>
+'use strict';
+// Shared artifacts preserve exact output → input continuity between slides.
+const ARTIFACTS = {
+ python: {name:'Python source',kind:'SOURCE',code:'linear = nn.Linear(K, N)\n\ndef model(X):\n    return relu(linear(X))',graph:['X','linear','relu','y'],foot:'입력 X[M,K] · 가중치 W[N,K] · bias b[N]'},
+ trace: {name:'Tensor operations',kind:'CAPTURE',code:'t0 = linear(X)\ny  = relu(t0)\nreturn y',graph:['X','linear','relu','y'],focus:[0,1],foot:'Linear·ReLU 단위의 기록 · 내부 수식 분해 전'},
+ fake: {name:'FakeTensor propagation',kind:'CAPTURE',code:'X  = FakeTensor(f32[M,K])   # 값 없음\nW  = FakeTensor(f32[N,K])\nb  = FakeTensor(f32[N])\nt0 = linear(X, W, b)   # → f32[M,N]\ny  = relu(t0)          # → f32[M,N]',focus:[3,4],foot:'데이터 없이 shape·dtype·device만 계산 · 결과는 노드의 meta["val"]에 저장'},
+ fx: {name:'FX Graph',kind:'GRAPH IR',code:'X = placeholder()\nW, b = parameters(linear)\nt0 = call_function(linear, X, W, b)\ny  = call_function(relu, t0)\noutput(y)',graph:['X · W · b','linear','relu','y'],foot:'FX 노드 표기 축약 · 노드마다 meta["val"] = FakeTensor 부착'},
+ aten: {name:'ATen FX Graph',kind:'GRAPH IR',code:'wt = aten.permute(W, [1, 0])\nt0 = aten.addmm(b, X, wt)   # b + X @ W.T\ny  = aten.relu(t0)\nreturn y',graph:['X · W.T','aten.addmm','aten.relu','y'],focus:[0,1,2],foot:'aot_graphs 실제 로그의 축약 · linear → permute + addmm'},
+ optimized: {name:'Post-grad ATen FX Graph',kind:'GRAPH IR',code:'wt = aten.permute(W, [1, 0])\nt0 = aten.mm(X, wt)\nt1 = aten.add(t0, b)\ny  = aten.relu(t1)\nreturn y',graph:['X · W.T','aten.mm','aten.add','aten.relu','y'],group:true,focus:[1,2],foot:'GPU 전용 pass unfuse_bias_add_to_pointwise · CPU는 addmm 유지'},
+ buffers: {name:'Buffer & operation IR',kind:'INDUCTOR IR',code:'# 버퍼 = 이름 + dtype + 크기 + stride\nT = extern_mm(X, W.T)       # f32[M,N]\nA = Buffer(f32, size=[M,N], stride=[N,1])\nY = Buffer(f32, size=[M,N], stride=[N,1])\n\nA[i,j] = T[i,j] + b[j]     # 위치 i*N + j\nY[i,j] = max(A[i,j], 0)',focus:[2,3,5],foot:'교육용 의사 IR · 주소는 런타임에 할당, 포인터는 커널 인자에서 처음 등장'},
+ loops: {name:'Loop / Buffer IR',kind:'INDUCTOR IR',code:'T = extern_mm(X, W.T)\n\nfor i, j in grid(M, N):\n    A[i,j] = T[i,j] + b[j]\n\nfor i, j in grid(M, N):\n    Y[i,j] = max(A[i,j], 0)',focus:[2,3,5,6],foot:'원소 단위 계산 = 반복 범위 + load/store'},
+ fused: {name:'Fused pointwise IR',kind:'SCHEDULE',code:'T = extern_mm(X, W.T)\n\nfor i, j in grid(M, N):\n    value = T[i,j] + b[j]\n    Y[i,j] = max(value, 0)\n\n# 중간 버퍼 A의 쓰기·읽기 제거',focus:[2,3,4],foot:'GEMM 1회 + add·relu 커널 1회 구성'},
+ tiled: {name:'Block execution plan',kind:'SCHEDULE',code:'# Y의 M×N 원소를 한 줄로 펼침: q = i*N + j\n# 예: M=2, N=5 → 원소 10개, 블록 크기 B=4\nblock 0 → q = 0 1 2 3\nblock 1 → q = 4 5 6 7\nblock 2 → q = 8 9 ░ ░    # 10·11은 mask\n\n각 블록이 동시에 실행:\n    Y[q] = max(T[q] + b[q % N], 0)',focus:[2,3,4],foot:'j = q % N으로 열 번호 복원 → bias b[j] 선택'},
+ triton: {name:'@triton.jit kernel',kind:'KERNEL SOURCE',code:'def kernel(T, b, Y, numel, N, B):\n    q = tl.program_id(0) * B + tl.arange(0, B)\n    mask = q < numel\n    t = tl.load(T + q, mask)\n    bias = tl.load(b + q % N, mask)\n    y = tl.maximum(t + bias, 0)\n    tl.store(Y + q, y, mask)',focus:[5],foot:'Python 문법의 Triton DSL · 실제 계산은 강조된 한 줄, 나머지는 위치·읽기·쓰기'},
+ ttir: {name:'Triton IR · TTIR',kind:'KERNEL IR',code:'%q    = tt.get_program_id + lane_offsets\n%t    = tt.load %T[%q], %mask\n%b    = tt.load %bias[%q % N], %mask\n%sum  = arith.addf %t, %b\n%y    = arith.maximumf %sum, %zero\ntt.store %Y[%q], %y, %mask',focus:[3,4],foot:'흐름 설명용 의사 IR · 완전한 MLIR 문법 아님'},
+ ttgir: {name:'Triton GPU IR · TTGIR',kind:'KERNEL IR',code:'#layout = blocked(threads, warps)\n\n%t    = tt.load %T[%q]       : #layout\n%b    = tt.load %bias[%q % N] : #layout\n%sum  = arith.addf %t, %b    : #layout\n%y    = arith.maximumf %sum, 0\ntt.store %Y[%q], %y',focus:[0,2,3],foot:'의사 IR · 원소 ↔ GPU 스레드·워프 배치 정보 추가'},
+ llvm: {name:'LLVM IR',kind:'LOW-LEVEL IR',code:'%t   = load float, ptr %t_ptr\n%b   = load float, ptr %b_ptr\n%sum = fadd float %t, %b\n%y   = call float @llvm.maximum.f32(\n         float %sum, float 0.0)\nstore float %y, ptr %y_ptr',focus:[2,3,4],foot:'원소 1개 경로만 발췌 · 주소 계산·분기·mask 생략'},
+ ptx: {name:'PTX · virtual ISA',kind:'VIRTUAL ASSEMBLY',code:'ld.global.f32  %f1, [%t_addr];\nld.global.f32  %f2, [%b_addr];\nadd.f32        %f3, %f1, %f2;\nmax.NaN.f32    %f4, %f3, 0f00000000;\nst.global.f32  [%y_addr], %f4;',focus:[2,3],foot:'NVIDIA 경로 발췌 · 실제 기계어 이전 단계'},
+ assembly: {name:'Target GPU assembly',kind:'ASSEMBLE',code:'PTX instructions\n    ↓ ptxas\nregister allocation\ninstruction selection & scheduling\n    ↓\nSASS · target-specific instructions',foot:'실제 명령·레지스터: GPU 아키텍처·컴파일 옵션마다 상이'},
+ binary: {name:'Compiled execution bundle',kind:'MACHINE CODE',code:'pointwise.cubin\n  └─ 대상 GPU용 기계어 · SASS\n\nwrapper / launch metadata\n  ① extern_mm(X, W.T) → T\n  ② pointwise(T, b) → Y',foot:'cubin = 실행 코드 바이너리 · GEMM은 라이브러리(cuBLAS)가 별도 제공'},
+ launch: {name:'Runtime · dispatch',kind:'EXECUTION',code:'check_guards(X, W, b)\nload_cached_kernel(pointwise.cubin)\nT, Y = prepare_buffers()\n\nextern_mm(X, W.T, out=T)\nlaunch(pointwise, T, b, Y, stream)',focus:[0,4,5],foot:'같은 stream 안의 순서 = 의존성 보장 · CPU가 결과를 읽을 때 동기화'},
+ values: {name:'Runtime · tensor values',kind:'EXECUTION',code:'X = [[1,-2], [3, 1]]\nW = [[2, 1], [0,-1]]   b = [1,-2]\n\nT = X @ W.T = [[0, 2], [7,-1]]\nT + b       = [[1, 0], [8,-3]]\nrelu(T+b)   = [[1, 0], [8, 0]]',focus:[3,4,5],foot:'M=N=K=2 예시 · nn.Linear와 같은 입력·가중치 배치'},
+ result: {name:'Output tensor · y',kind:'RESULT',code:'y = [[1, 0],\n     [8, 0]]\n\n# 처음 Linear + ReLU와 동일한 계산\ny = relu(linear(X))',graph:['X','linear','relu','y ✓'],foot:'Linear → 그래프 → 루프 → 커널 → 기계어 → 실제 값'}
+};
+const F=(title,artifact,body,detail,place='work')=>({title,artifact,body,detail,place});
+const STAGES = [
+ {title:'Graph Capture',subtitle:'Python 코드 → 연산 그래프 추출',owner:'TorchDynamo',short:'Capture',output:'FX Graph',frames:[
+  F('Input','python','Python 함수와 입력 텐서','추론 경로 하나만 가정|입력 X[M,K], 가중치 W[N,K], bias b[N]','input'),
+  F('연산 추적','trace','바이트코드 실행 중 텐서 연산 기록','Python 바이트코드를 한 줄씩 해석|텐서 연산만 골라 순서대로 기록|이 시점의 linear는 분해 전 한 덩어리','work'),
+  F('FakeTensor 전파','fake','값 없는 텐서로 결과 모양만 계산','추적과 동시에 연산마다 FakeTensor 실행|실제 계산·메모리 없이 shape·dtype·device 확보|결과를 노드의 meta["val"]에 저장'),
+  F('Graph IR 구성','fx','기록된 연산 → FX 노드와 간선','연산 1개 = FX 노드 1개|X → linear → relu 의존 관계 보존|노드마다 FakeTensor 메타데이터 부착'),
+  F('Output','fx','캡처 완료된 FX Graph','입력 조건 검사용 guard 생성|FX Graph + FakeTensorMode를 다음 단계로 전달','output')
+ ]},
+ {title:'Graph Optimization',subtitle:'ATen 수준 재추적 + post-grad 패턴 치환',owner:'AOTAutograd / TorchInductor',short:'Optimize',output:'Post-grad ATen FX',frames:[
+  F('Input','fx','Graph Capture의 FX Graph 수신','torch 수준 연산 linear, relu로 구성|Dynamo의 FakeTensorMode도 함께 전달','input'),
+  F('ATen 추적 + 분해','aten','AOTAutograd의 ATen 그래프 생성','같은 FakeTensorMode로 그래프 재실행|분해·functionalization을 추적 중에 동시 적용|linear → permute + addmm (2D 입력 + bias)'),
+  F('Post-grad pass','optimized','addmm → mm + add 분리','meta["val"]로 device·dtype 확인 후 GPU에서만 적용|조건: addmm 결과를 pointwise 연산만 사용|목적: bias add를 relu와 한 커널로 묶기'),
+  F('Output','optimized','정리된 ATen FX Graph','permute(view) → mm → add → relu|실제 fusion 결정은 Scheduling 단계에서 수행','output')
+ ]},
+ {title:'Lowering',subtitle:'연산 그래프 → 버퍼와 원소 단위 계산',owner:'TorchInductor',short:'Lowering',output:'Loop / Buffer IR',frames:[
+  F('Input','optimized','정리된 ATen 연산 그래프','mm → add → relu 연결|노드별 FakeTensor 메타데이터 보유','input'),
+  F('버퍼와 인덱스','buffers','결과를 담을 저장공간의 명세','버퍼 = 이름·dtype·크기·stride 정보|메모리 주소·포인터 아님 (할당은 런타임)|stride [N,1] → A[i,j]의 위치 = i*N + j'),
+  F('Loop IR 생성','loops','원소 단위 반복 범위 표현','i, j 범위마다 add 1회, relu 1회|add와 relu는 아직 별도 루프'),
+  F('Output','loops','Loop / Buffer IR','버퍼별 읽기·쓰기 의존 관계 명시|실행 순서·fusion 판단의 재료','output')
+ ]},
+ {title:'Scheduling',subtitle:'실행 순서와 커널 경계 결정',owner:'TorchInductor',short:'Schedule',output:'Triton source',frames:[
+  F('Input','loops','분리된 원소 단위 계산','GEMM 출력 T에 의존|add와 relu가 각자의 반복 범위 보유','input'),
+  F('Operator fusion','fused','add + relu를 루프 하나로 병합','같은 반복 범위 [M,N] → 병합 가능|중간 버퍼 A의 쓰기·읽기 제거|결과: GEMM 1회 + pointwise 커널 1회'),
+  F('블록 배치','tiled','원소를 B개씩 나눠 GPU 블록에 분배','원소 M×N개를 한 줄로 펼친 뒤 B개씩 분할|블록 1개 = GPU 스레드 묶음 1개, 모두 병렬 실행|마지막 블록의 빈칸은 mask로 제외'),
+  F('Code generation','triton','실행 계획 → Triton 커널 코드','q, mask ← 블록 배치|tl.load / tl.store ← 버퍼|tl.maximum(t + bias, 0) ← fusion 결과'),
+  F('Output','triton','생성된 Triton 커널 소스','Python 문법이지만 Python이 실행하지 않음|@triton.jit이 AST를 읽어 Triton IR로 컴파일|GEMM은 cuBLAS 호출로 wrapper에 따로 기록','output')
+ ]},
+ {title:'Kernel Compiler',subtitle:'커널 소스 → GPU 가상 명령어',owner:'Triton / LLVM',short:'Kernel',output:'PTX',frames:[
+  F('Input','triton','생성된 Triton 커널 소스','@triton.jit 함수 → 여기서 처음 컴파일|행렬곱은 cuBLAS 경로로 별도 처리','input'),
+  F('Triton IR','ttir','블록 연산을 IR로 명시','load, add, maximum, store → IR 연산|타입·인수는 줄여서 표기'),
+  F('GPU IR','ttgir','스레드·워프 배치 정보 추가','원소별 layout 정보 부착|메모리 접근·데이터 배치 최적화'),
+  F('LLVM IR','llvm','포인터 기반 저수준 연산','주소 기반 load/store|원소 1개의 부동소수점 계산 발췌'),
+  F('Output · PTX','ptx','NVIDIA 가상 ISA','LLVM NVPTX backend가 PTX 생성|실제 기계어 이전의 중간 표현','output')
+ ]},
+ {title:'Machine Code',subtitle:'특정 GPU용 실행 바이너리 생성',owner:'NVIDIA toolchain',short:'Machine',output:'cubin + wrapper',frames:[
+  F('Input','ptx','가상 명령어 PTX','Kernel Compiler의 출력|아직 특정 GPU에 묶이지 않은 상태','input'),
+  F('타깃 컴파일','assembly','레지스터·실제 명령 결정','ptxas: 명령 선택·스케줄링·레지스터 할당|결과: 대상 GPU 전용 SASS'),
+  F('Output','binary','기계어 + 호출 정보','cubin: 대상 GPU용 기계어|wrapper: 외부 GEMM과 생성 커널 연결','output')
+ ]},
+ {title:'Runtime',subtitle:'컴파일 결과 + 실제 입력 → 텐서 값',owner:'Host wrapper / GPU',short:'Runtime',output:'Output tensor',frames:[
+  F('Input','binary','컴파일된 실행 묶음','IR 변환 종료, 실제 실행 시작|여기서 처음으로 진짜 텐서 값 사용','input'),
+  F('준비와 호출','launch','실행 조건 확인 + 버퍼 준비','guard 통과 시 캐시된 커널 재사용|같은 stream에서 GEMM → pointwise 순서 실행'),
+  F('텐서 계산','values','작은 입력으로 수식 검산','2×2 행렬곱 + 열 방향 bias|relu: 음수 -3 → 0'),
+  F('Output','result','최종 출력 텐서','그래프·루프·커널을 거쳐도 같은 계산|y = [[1,0],[8,0]]','output')
+ ]}
+];
+const SOURCE_LINKS=[
+ ['PyTorch Linear implementation','https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/Linear.cpp','X @ W.T + b 계산, addmm 구현 경로'],
+ ['torch.export tutorial','https://docs.pytorch.org/tutorials/intermediate/torch_export_tutorial.html','ATen 그래프와 run_decompositions의 관계'],
+ ['Inductor post-grad passes','https://github.com/pytorch/pytorch/blob/main/torch/_inductor/fx_passes/post_grad.py','unfuse_bias_add_to_pointwise: addmm → mm + add'],
+ ['TorchDynamo overview','https://docs.pytorch.org/docs/stable/torch.compiler_dynamo_overview.html','Python 실행 → FX 그래프 + guard 생성'],
+ ['FakeTensor','https://docs.pytorch.org/docs/stable/torch.compiler_fake_tensor.html','값 없는 텐서로 shape·dtype 전파, Dynamo·AOTAutograd 공유'],
+ ['TorchInductor architecture','https://dev-discuss.pytorch.org/t/torchinductor-a-pytorch-native-compiler-with-define-by-run-ir-and-symbolic-shapes/747','연산 → 루프·버퍼 표현, fusion, codegen'],
+ ['Triton compilation stages','https://pytorch.org/blog/triton-kernel-compilation-stages/','Triton IR → GPU IR → LLVM IR → PTX → cubin'],
+ ['Triton NVIDIA backend','https://github.com/triton-lang/triton/blob/main/third_party/nvidia/backend/compiler.py','실제 backend 컴파일 단계, ptxas 호출']
+];
+
+'use strict';
+const DeckState = (()=>{
+ const first=()=>({slide:0,frame:0});
+ const last=()=>({slide:STAGES.length,frame:STAGES.at(-1).frames.length-1});
+ const isLast=p=>p.slide===last().slide&&p.frame===last().frame;
+ const next=p=>p.slide===0?{slide:1,frame:0}:p.frame<STAGES[p.slide-1].frames.length-1?{slide:p.slide,frame:p.frame+1}:p.slide<STAGES.length?{slide:p.slide+1,frame:0}:p;
+ const prev=p=>p.frame>0?{slide:p.slide,frame:p.frame-1}:p.slide>1?{slide:p.slide-1,frame:STAGES[p.slide-2].frames.length-1}:first();
+ const parse=hash=>{
+  const m=/^#(\d+):(\d+)$/.exec(hash);
+  if(!m)return first();
+  const slide=Number(m[1]),frame=Number(m[2]);
+  return (slide===0&&frame===0)||(slide>=1&&slide<=STAGES.length&&frame<STAGES[slide-1].frames.length)?{slide,frame}:first();
+ };
+ return {first,last,next,prev,isLast,parse};
+})();
+
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const motion=matchMedia('(prefers-reduced-motion: reduce)');
+const systemTheme=matchMedia('(prefers-color-scheme: dark)');
+let position=DeckState.parse(location.hash),renderedArtifact=null,oldSlide=-1;
+const card=$('#artifact');
+function setTheme(theme){document.documentElement.dataset.theme=theme;$('#theme').textContent=theme==='dark'?'라이트':'다크';$('#theme').setAttribute('aria-label',theme==='dark'?'라이트 테마 전환':'다크 테마 전환');}
+let savedTheme;try{savedTheme=localStorage.getItem('compiler-deck-theme');}catch{}
+setTheme(savedTheme==='light'||savedTheme==='dark'?savedTheme:systemTheme.matches?'dark':'light');
+$('#theme').addEventListener('click',()=>{savedTheme=document.documentElement.dataset.theme==='dark'?'light':'dark';setTheme(savedTheme);try{localStorage.setItem('compiler-deck-theme',savedTheme);}catch{}});
+systemTheme.addEventListener('change',()=>{if(!savedTheme)setTheme(systemTheme.matches?'dark':'light');});
+$('#stage-nav').innerHTML=STAGES.map((s,i)=>`<button data-slide="${i+1}" aria-label="${i+1}. ${s.title}">${s.short}</button>`).join('');
+$('#journey-map').innerHTML=STAGES.map((s,i)=>`<button class="map-step ${i===6?'runtime':''}" data-slide="${i+1}"><h2>${s.title}</h2><p>${s.output}</p></button>`).join('')+'<svg class="map-connector" viewBox="0 0 1440 388" aria-hidden="true"><path d="M1272 160 V194 H168 V224 M163 219 L168 224 L173 219"/></svg><div class="map-end"><code>y = [[1, 0],<br>     [8, 0]]</code><ul><li>동일한 수식의 최종 결과</li></ul></div>';
+$('#source-links').innerHTML=SOURCE_LINKS.map(([name,url,note])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(name)} ↗</a><small>• ${esc(note)}</small>`).join('');
+function resize(){const scale=Math.min(innerWidth/1600,innerHeight/1000);$('#deck').style.transform=`translate(-50%, -50%) scale(${scale})`;}
+function animate(el,frames,options){el.getAnimations().forEach(a=>a.cancel());if(!motion.matches)el.animate(frames,options);}
+function taskY(index,count){return 284+Math.max(0,3-count)*55+index*124;}
+function updateArtifact(id){
+ if(id===renderedArtifact)return;
+ const a=ARTIFACTS[id],oldLines=new Set((ARTIFACTS[renderedArtifact]?.code||'').split('\n'));
+ $('#artifact-name').textContent=a.name;$('#artifact-kind').textContent=a.kind;
+ $('#artifact-code').innerHTML=a.code.split('\n').map((line,i)=>`<span class="code-line ${a.focus?.includes(i)?'highlight':''} ${line.trim().startsWith('#')?'comment':''}" data-changed="${!oldLines.has(line)}"><span class="line-number" aria-hidden="true">${String(i+1).padStart(2,'0')}</span>${esc(line)||' '}</span>`).join('');
+ $('#mini-graph').innerHTML=(a.graph||[]).map((n,i)=>`${i?'<span class="graph-arrow" aria-hidden="true">→</span>':''}<span class="graph-node ${a.group&&(i===2||i===3)?'fused':''}">${esc(n)}</span>`).join('');
+ $('#artifact-foot').textContent=a.foot;
+ if(renderedArtifact){
+  document.querySelectorAll('.code-line[data-changed=true]').forEach((line,i)=>animate(line,[{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:400,delay:220+i*35,fill:'backwards',easing:'ease-out'}));
+  animate($('#mini-graph'),[{opacity:.25},{opacity:1}],{duration:400});
+ }
+ renderedArtifact=id;
+}
+function render(){
+ const {slide,frame}=position,overview=slide===0;
+ $('#overview').hidden=!overview;$('#stage').hidden=overview;card.hidden=overview;
+ document.querySelectorAll('#stage-nav button').forEach(b=>{if(Number(b.dataset.slide)===slide)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});
+ $('#previous').disabled=overview;$('#next').disabled=DeckState.isLast(position);
+ $('#position').textContent=overview?'전체 지도':`${slide} / ${STAGES.length}`;
+ if(overview){$('#footer-hint').textContent='• → 키: 단계별 진행';$('#announcement').textContent='전체 컴파일 지도';oldSlide=0;return;}
+ const s=STAGES[slide-1],f=s.frames[frame],tasks=s.frames.slice(1,-1),count=tasks.length;
+ if(oldSlide!==slide){
+  $('#stage-owner').textContent=s.owner;$('#stage-title').textContent=s.title;$('#stage-subtitle').textContent=s.subtitle;
+  $('#steps').innerHTML=tasks.map((x,i)=>`<button data-frame="${i+1}" style="top:${taskY(i,count)}px"><strong>${esc(x.title)}</strong><small>${esc(ARTIFACTS[x.artifact].name)}</small></button>`).join('');
+  const input=ARTIFACTS[s.frames[0].artifact];$('#input-name').textContent=input.name;$('#input-code').textContent=input.code;
+  $('#input-origin').textContent=slide===1?'Python source':STAGES[slide-2].output;
+  $('#next-stage-label').textContent=slide<STAGES.length?`${STAGES[slide].title}의 입력`:'최종 텐서';
+  const first=taskY(0,count),last=taskY(count-1,count);
+  $('#entry-route').setAttribute('d',`M630 328 H653 V${first+51} H680 M674 ${first+46} L680 ${first+51} L674 ${first+56}`);
+  $('#spine-route').setAttribute('d',tasks.slice(1).map((_,i)=>{const y=taskY(i,count)+102,ny=taskY(i+1,count);return `M790 ${y} V${ny} M785 ${ny-6} L790 ${ny} L795 ${ny-6}`;}).join(' '));
+  $('#exit-route').setAttribute('d',`M790 ${last+102} V${last+122} H935 V570 H1000 M994 565 L1000 570 L994 575`);
+  animate($('.slide-heading'),[{opacity:.3},{opacity:1}],{duration:350});
+ }
+ document.querySelectorAll('#steps button').forEach((b,i)=>{const active=frame===i+1;b.className=active?'active':frame>i+1?'done':'';if(active)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');b.querySelector('small').textContent=frame>i+1?`완료 / ${ARTIFACTS[tasks[i].artifact].name}`:ARTIFACTS[tasks[i].artifact].name;});
+ const y=taskY(Math.max(0,frame-1),count)-10;
+ card.style.setProperty('--card-y',`${y}px`);card.dataset.place=f.place;card.dataset.artifact=f.artifact;
+ $('#artifact-role').textContent=f.place==='input'?'INPUT':f.place==='output'?'OUTPUT':f.title;
+ $('#input-preview').classList.toggle('waiting',f.place==='input');
+ $('#input-preview').setAttribute('aria-hidden',String(f.place==='input'));
+ const route=f.place==='input'?$('#entry-route').getAttribute('d'):f.place==='output'?$('#exit-route').getAttribute('d'):`M905 ${y+61} H935 V${y+23} H965 M959 ${y+18} L965 ${y+23} L959 ${y+28}`;
+ $('#active-route').setAttribute('d',route);
+ updateArtifact(f.artifact);
+ $('#explain-tag').textContent=f.place==='input'?'입력':f.place==='output'?'출력':f.title;
+ $('#explain-title').textContent=f.body;$('#explain-detail').innerHTML=f.detail.split('|').map(t=>`<li>${esc(t)}</li>`).join('');
+ $('#handoff-hint').textContent=f.place==='output'?(slide<STAGES.length?`• 다음 슬라이드 INPUT으로 전달`:'• 전체 컴파일 과정 완료'):'';
+ animate($('#explain-detail'),[{opacity:0},{opacity:1}],{duration:350});
+ $('#footer-hint').textContent=DeckState.isLast(position)?'• Home: 처음부터 다시 보기':f.place==='output'?'• 다음: 다음 슬라이드 INPUT':`• 다음: ${s.frames[frame+1]?.title||'다음 단계'}`;
+ $('#announcement').textContent=`${s.title}, ${f.title}. ${f.body}`;
+ oldSlide=slide;
+}
+function go(p){if(p.slide===position.slide&&p.frame===position.frame)return;position=p;history.replaceState(null,'',`#${p.slide}:${p.frame}`);render();}
+function next(){go(DeckState.next(position));}function previous(){go(DeckState.prev(position));}
+$('#next').addEventListener('click',next);$('#previous').addEventListener('click',previous);$('#start').addEventListener('click',next);$('#home').addEventListener('click',()=>go(DeckState.first()));
+document.addEventListener('click',e=>{const slide=e.target.closest('[data-slide]'),frame=e.target.closest('[data-frame]');if(slide)go({slide:Number(slide.dataset.slide),frame:0});else if(frame)go({slide:position.slide,frame:Number(frame.dataset.frame)});});
+$('#sources').addEventListener('click',()=>$('#source-dialog').showModal());$('#close-sources').addEventListener('click',()=>$('#source-dialog').close());
+async function fullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{$('#announcement').textContent='전체화면 전환 실패 · 브라우저 전체화면 기능 사용 필요';}}
+$('#fullscreen').addEventListener('click',fullscreen);
+document.addEventListener('keydown',e=>{
+ if($('#source-dialog').open||e.altKey||e.ctrlKey||e.metaKey||e.target.matches('input,textarea,select,[contenteditable=true]')||e.repeat)return;
+ if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next();}
+ else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();previous();}
+ else if(e.key===' '&&!e.target.closest('button,a')){e.preventDefault();next();}
+ else if(e.key==='Home'||e.key==='Escape'){e.preventDefault();go(DeckState.first());}
+ else if(e.key==='End'){e.preventDefault();go(DeckState.last());}
+ else if(e.key.toLowerCase()==='f'){e.preventDefault();fullscreen();}
+});
+addEventListener('hashchange',()=>{position=DeckState.parse(location.hash);render();});addEventListener('resize',resize);resize();render();
+
+</script>
+</body></html>
