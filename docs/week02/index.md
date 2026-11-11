@@ -1,13 +1,38 @@
 <WeekNavBar :week="2" topic="모델에서 실리콘까지" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'PyTorch·XLA·MAX 2부작'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': '다이어그램 & 스택 해부'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '실행 스택 핵심 요약'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '인터랙티브 HTML & 슬라이드'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': '컴파일 파이프라인 정리'}]" />
 
-### PyTorch, JAX·OpenXLA, Modular MAX·Mojo로 이해하는 AI 실행 스택
+# PyTorch, JAX·OpenXLA, Modular MAX·Mojo로 이해하는 AI 실행 스택
 
 > **핵심 질문**  
 > 모델의 연산 하나가 가속기에서 실행되기까지 어떤 단계를 거치며, 각 단계는 무엇을 담당할까?
 
 ---
 
-## 목차
+
+<TldrMapCard
+  :week="2"
+  intuition="Python 수식 한 줄(Y = ReLU(X @ W + b))은 곧바로 실리콘 위에서 돌지 않습니다. Eager 모드는 연산마다 커널을 따로 띄워 느린 HBM에 중간 결과를 계속 썼다 읽지만, 컴파일 스택(PyTorch 2 · OpenXLA · MAX)은 전체 연산 그래프(IR)를 먼저 캡처한 뒤 여러 연산을 단일 커널로 합쳐(Fusion) HBM 왕복을 제거합니다."
+  :steps="[
+    { tag: 'STEP 1 · 1~5절', title: '수식에서 그래프·IR 캡처와 Fusion', desc: '논리적 중간 텐서와 물리적 HBM 버퍼를 구분하고, Eager 실행과 그래프 컴파일러(Fusion)의 차이를 이해합니다.' },
+    { tag: 'STEP 2 · 6~7절', title: '비동기 런타임과 GPU·TPU 실행', desc: 'CPU 호스트가 비동기 큐(Stream)에 커널을 등록하는 원리와 GPU(SIMT)·TPU(Systolic) 하드웨어 구조를 추적합니다.' },
+    { tag: 'STEP 3 · 8~12절', title: '3대 실행 스택 & Triton 비교', desc: 'PyTorch(Dynamo·Inductor), JAX(OpenXLA), Modular MAX·Mojo 세 스택을 5대 계층 기준으로 대조합니다.' }
+  ]"
+  :keyQuestions="[
+    '수식상 존재하는 중간 결과(Z = A + b)를 실제 HBM 메모리에 기록하지 않고도 다음 연산을 수행할 수 있는 이유는 무엇일까?',
+    'GPU 커널 실행 시간을 잴 때 동기화(synchronize) 없이 CPU 타이머만 찍으면 왜 실제보다 훨씬 짧은 가짜 시간이 측정될까?',
+    'PyTorch 2.0(Inductor), JAX(OpenXLA), Modular MAX는 각각 어느 계층에서 그래프를 캡처하고 커널 코드를 생성할까?'
+  ]"
+  :checkpoints="[
+    { id: 'cp1-check', shortLabel: 'Eager vs Fusion 진단', anchorId: 'cp1-check' },
+    { id: 'cp2-predict', shortLabel: '비동기 측정 함정', anchorId: 'cp2-predict' },
+    { id: 'cp3-calc', shortLabel: '중간 버퍼 손계산', anchorId: 'cp3-calc' },
+    { id: 'cp4-quest', shortLabel: '실행 스택 매칭 미션', anchorId: 'cp4-quest' },
+    { id: 'cp5-feynman', shortLabel: '파인만 한줄설명 & 인증', anchorId: 'cp5-feynman' }
+  ]"
+/>
+
+
+<details class="t2s-solution-toggle">
+<summary>📑 전체 절 목록 펼쳐보기 (우측 고정 목차에서도 바로 이동 가능)</summary>
 
 1. [이번 주에 알아야 할 큰 그림](#1-이번-주에-알아야-할-큰-그림)
 2. [공통 예제의 수학과 텐서](#2-공통-예제의-수학과-텐서)
@@ -26,6 +51,8 @@
 15. [스터디 발표와 토론 가이드](#15-스터디-발표와-토론-가이드)
 16. [용어 사전과 최종 요약](#16-용어-사전과-최종-요약)
 17. [공식 자료와 추가 읽기](#17-공식-자료와-추가-읽기)
+
+</details>
 
 ---
 
@@ -86,17 +113,6 @@
     <a class="t2s-synthesis-link" href="./researchers/jaehyeong">원문 노트 & 실측 분석 읽기 →</a>
   </div>
 </div>
-
----
-
-
-## 🖥️ 인터랙티브 실행 스택 아키텍처 & 슬라이드 덱
-
-> 2주차 연구원(`injokim`)이 제작한 인터랙티브 학습 노트와 `torch.compile` 내부 구조 슬라이드 덱입니다. 페이지 안에서 바로 조작하거나 **전체화면**으로 열람할 수 있습니다.
-
-<HtmlDeckViewer src="/decks/injokim-week02.html" title="PyTorch · OpenXLA · Modular MAX 실행 스택 인터랙티브 노트" author="injokim (김인조)" :height="580" />
-
-<HtmlDeckViewer src="/decks/torch-compile-anatomy-deck.html" title="torch.compile 내부 구조 해부 (Dynamo → AOTAutograd → Inductor)" author="T2S Lab" :height="580" />
 
 ---
 
@@ -524,6 +540,33 @@ flowchart TB
 
 ---
 
+
+<MicroCheckpoint
+  :week="2"
+  checkpointId="cp1-check"
+  mode="choice"
+  badge="CHECKPOINT 1 · 2~5절 핵심 개념 점검 (Eager vs Fusion)"
+  title="수식 속 중간 텐서는 항상 HBM 메모리에 저장되어야 할까?"
+  question="2.3절의 공통 예제 A = X @ W → Z = A + b → Y = max(Z, 0)을 실행할 때, 기본 Eager 실행과 컴파일러 커널 퓨전(Fusion)의 차이에 대한 설명으로 가장 정확한 것은 무엇일까요?"
+  :options="[
+    {
+      label: '커널 퓨전을 적용하면 행렬곱(X @ W) 자체의 곱셈·덧셈 횟수(FLOPs)가 절반으로 줄어들어 빨라진다.',
+      correct: false,
+      feedback: '아닙니다! 커널을 합쳐도 수학적 계산 횟수(FLOPs)는 변하지 않습니다. 줄어드는 것은 연산 횟수가 아니라 HBM 메모리 왕복입니다.'
+    },
+    {
+      label: 'Eager 모드는 연산마다 별도 커널을 띄워 중간 텐서(A, Z)를 HBM에 썼다 다시 읽지만, Fusion은 온칩 레지스터/SRAM 위에서 연속 처리해 중간 HBM 왕복을 없앤다.',
+      correct: true,
+      feedback: '정확합니다! 수식상의 논리적 중간 결과(A, Z)를 물리적 HBM 버퍼에 실체화(Materialization)하지 않고 칩 내부 레지스터에서 바로 + b와 ReLU까지 끝내는 것이 Epilogue/Kernel Fusion의 핵심입니다.'
+    },
+    {
+      label: 'Eager 모드에서도 Python 인터프리터가 자동으로 다음 줄 코드를 미리 읽어 단일 GPU 커널로 합쳐서 실행한다.',
+      correct: false,
+      feedback: 'Python Eager 실행은 한 줄씩 즉시 디스패치하므로 다음 줄에 어떤 연산이 올지 미리 알 수 없습니다. 그래서 전체 그래프(IR) 캡처 단계가 필요합니다!'
+    }
+  ]"
+/>
+
 ## 6. 실행 요청에서 커널 실행으로: 런타임과 비동기성
 
 ### 6.1 런타임은 무엇을 하는가?
@@ -627,7 +670,29 @@ elapsed = time.perf_counter() - start
 
 ---
 
-## 7. 커널에서 칩 내부로: GPU와 TPU ​​
+
+<MicroCheckpoint
+  :week="2"
+  checkpointId="cp2-predict"
+  mode="choice"
+  badge="CHECKPOINT 2 · 6절 비동기 실행 함정 진단 (Spot-the-Bug)"
+  title="GPU 커널이 0.03 ms 만에 끝났다고요? 벤치마크 코드의 버그를 찾아보세요!"
+  question="동료가 PyTorch에서 거대한 행렬곱 y = x @ w 의 실행 시간을 재기 위해 start = time.perf_counter(); y = x @ w; elapsed = time.perf_counter() - start 만 실행했더니 0.03 ms가 나왔다고 기뻐합니다. 실제로 무슨 일이 일어난 걸까요?"
+  :options="[
+    {
+      label: 'GPU 연산기가 워낙 빨라서 실제로 4096×4096 행렬곱 계산이 0.03 ms 만에 완전히 끝난 것이다.',
+      correct: false,
+      feedback: '아직 실제 GPU 실리콘에서는 계산이 한창 진행 중이거나 막 시작된 상태일 가능성이 높습니다!'
+    },
+    {
+      label: '비동기 실행(Asynchronous Launch) 때문에 CPU가 런타임 큐(Stream)에 커널 실행 요청만 등록하고 즉시 다음 줄로 넘어간 시간만 측정된 것이다.',
+      correct: true,
+      feedback: '정답입니다! GPU 커널 디스패치는 기본적으로 비동기이므로, 실제 실리콘 실행 완료 시간을 재려면 반드시 앞뒤에 torch.cuda.synchronize() (또는 CUDA Event)를 넣어 큐가 비워질 때까지 기다려야 합니다.'
+    }
+  ]"
+/>
+
+## 7. 커널에서 칩 내부로: GPU와 TPU 
 
 ### 7.1 커널은 수학 연산 그 자체가 아니다
 
@@ -702,6 +767,22 @@ GPU의 **Tensor Core**와 TPU 문서의 **TensorCore**는 같은 크기의 구�
 이름보다 **어떤 기능을 포함하는 단위인지** 확인해야 한다.
 
 ---
+
+
+<MicroCheckpoint
+  :week="2"
+  checkpointId="cp3-calc"
+  mode="number"
+  badge="CHECKPOINT 3 · Epilogue Fusion 중간 버퍼 이동량 계산"
+  title="중간 텐서 실체화(Materialization)를 없애면 몇 MB를 아낄 수 있을까?"
+  question="공통 예제 A = X @ W → Z = A + b → Y = max(Z, 0)에서 출력과 동일한 모양인 텐서 A, Z, Y의 크기가 각각 16 MB라고 가정합시다. Eager 모드에서는 A 쓰기(16) + A 읽기(16) + Z 쓰기(16) + Z 읽기(16)로 중간 결과 때문에만 총 64 MB의 HBM 왕복이 발생합니다. 만약 컴파일러가 Epilogue Fusion으로 행렬곱 누산 레지스터 위에서 + b와 ReLU까지 한 번에 처리하고 최종 Y(16 MB)만 HBM에 기록한다면, 중간 텐서(A, Z) 때문에 발생하는 HBM 왕복 데이터양은 몇 MB가 될까요?"
+  :expectedAnswer="0"
+  :tolerance="0.01"
+  unit="MB"
+  placeholder="숫자 입력"
+  hint="중간 결과 A와 Z가 HBM에 아예 기록되지도, 다시 읽히지도 않고 칩 내부 레지스터에서만 소비된 뒤 사라집니다!"
+  solutionExplanation="정답입니다! 중간 텐서 A와 Z의 HBM 왕복량은 정확히 0 MB가 됩니다(64 MB 절감!). 논리적으로는 수식에 A와 Z가 존재하지만 물리적 HBM 메모리에는 최종 결과 Y만 기록됩니다."
+/>
 
 ## 8. PyTorch 경로와 예제
 
@@ -1776,6 +1857,49 @@ Triton 공식 vector addition 예제 역시 `program_id`, offset, mask, launch g
 
 ---
 
+
+## 🖥️ 실습 검증: 실행 스택 매칭 미션 & 인터랙티브 슬라이드 (Checkpoint 4)
+
+<ConceptMatchQuest
+  :week="2"
+  checkpointId="cp4-quest"
+  badge="CHECKPOINT 4 · 5대 실행 스택 역할 매칭 미션"
+  title="방금 비교한 실행 스택 구성 요소와 핵심 역할을 바르게 연결해 보세요!"
+  instruction="왼쪽의 기술/계층 카드를 먼저 클릭한 뒤, 오른쪽에서 알맞은 설명 카드를 클릭해 4쌍을 모두 연결하면 미션이 완료됩니다."
+  :pairs="[
+    {
+      id: 'dynamo',
+      left: 'TorchDynamo (PyTorch 2)',
+      right: 'Python 바이트코드를 가로채 실행 연산들을 FX 그래프(IR)로 캡처하는 프론트엔드'
+    },
+    {
+      id: 'inductor',
+      left: 'TorchInductor',
+      right: '캡처된 그래프에서 연산 퓨전을 수행하고 Triton 또는 C++ 커널 코드를 자동 생성하는 백엔드 컴파일러'
+    },
+    {
+      id: 'stablehlo',
+      left: 'StableHLO (JAX · OpenXLA)',
+      right: '다양한 프레임워크와 하드웨어 컴파일러 사이를 연결하는 이식성 높은 고수준 MLIR 연산 집합'
+    },
+    {
+      id: 'stream',
+      left: 'CUDA Stream / Runtime',
+      right: '호스트(CPU)가 디바이스(GPU)에 커널을 순서대로 비동기 등록하고 실행을 중재하는 실행 큐 계층'
+    }
+  ]"
+/>
+
+### 🎞️ 인터랙티브 실행 스택 아키텍처 & 슬라이드 덱 (`injokim`)
+
+> 2주차 연구원(`injokim`)이 제작한 인터랙티브 학습 노트와 `torch.compile` 내부 구조 슬라이드 덱입니다. 직접 탭을 클릭하거나 **전체화면**으로 열람해 보세요.
+
+<HtmlDeckViewer src="/decks/injokim-week02.html" title="PyTorch · OpenXLA · Modular MAX 실행 스택 인터랙티브 노트" author="injokim (김인조)" :height="560" />
+
+<HtmlDeckViewer src="/decks/torch-compile-anatomy-deck.html" title="torch.compile 내부 구조 해부 (Dynamo → AOTAutograd → Inductor)" author="T2S Lab" :height="560" />
+
+---
+
 ## 13. 작게 해볼 수 있는 관찰 실험
 
 코드를 반드시 실행할 필요는 없다. 실행한다면 설치·환경 구성에 너무 많은 시간을 쓰기보다, 한 계층에서 관찰할 수 있는 사실을 명확히 정하는 것이 좋다.
@@ -1918,6 +2042,24 @@ layout·contiguous 여부:
 ```
 
 실험 환경을 기록하지 않으면 다른 사람의 결과와 숫자만 비교하기 쉽다.
+
+---
+
+
+## 🏅 Week 02 완독 점검 & 인증 패스포트 (Checkpoint 5)
+
+<FeynmanPassport
+  :week="2"
+  weekTitle="모델에서 실리콘까지 — AI 실행 스택 5대 계층 해부"
+  checkpointId="cp5-feynman"
+  :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
+  promptQuestion="질문: PyTorch Eager 실행과 비교했을 때, torch.compile이나 OpenXLA처럼 그래프(IR)를 먼저 캡처해 컴파일하는 방식이 실제 가속기에서 더 빠르게 동작하는 가장 핵심적인 이유는 무엇인가요?"
+  modelAnswer="Eager 실행은 연산을 하나씩 즉시 디스패치하므로 중간 텐서를 매번 느린 HBM에 썼다가 다시 읽고 커널 런치 오버헤드도 반복됩니다. 반면 그래프(IR)를 먼저 캡처하면 컴파일러가 앞뒤 연산 흐름을 한눈에 보고 여러 연산을 단일 커널로 결합(Fusion)하여, 중간 결과를 온칩 레지스터·SRAM 안에서 바로 재사용하고 HBM 왕복을 제거할 수 있습니다."
+  :selfCheckItems="[
+    'Eager 모드의 한계 언급: 연산별 개별 커널 실행으로 인한 중간 결과의 HBM 읽기/쓰기 반복(또는 런치 오버헤드)을 짚었다.',
+    '그래프 컴파일의 이점 언급: 앞뒤 연산을 함께 보고 커널 결합(Fusion)을 수행해 온칩 메모리에서 바로 이어 계산한다는 점을 설명했다.'
+  ]"
+/>
 
 ---
 

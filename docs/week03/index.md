@@ -1,6 +1,6 @@
 <WeekNavBar :week="3" topic="커널의 시간은 어디에서 소비되는가" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'GPU·TPU 메모리 계층 비교'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': '손계산 & 병목 판별'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': 'SRAM vs DRAM 물리 구조'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '수식 모델링 & 정량 분석'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': '메모리 계층 & 실전 예제'}]" />
 
-### Vector Add로 이해하는 커널 실행시간 — 연산, 데이터 이동, 메모리 병목
+# Vector Add로 이해하는 커널 실행시간 — 연산, 데이터 이동, 메모리 병목
 
 > **핵심 질문**  
 > 같은 연산인데 왜 어떤 커널은 빠르고 어떤 커널은 느릴까? 계산하는 시간과 데이터를 옮기는 시간을 어떻게 구분할 수 있을까?
@@ -13,7 +13,32 @@
 
 ---
 
-## 목차
+
+<TldrMapCard
+  :week="3"
+  intuition="커널의 실행 시간은 '얼마나 많이 계산하는가(F/P)'와 '얼마나 많이 옮기는가(Q/BW)' 중 더 오래 걸리는 쪽이 지배합니다. Vector Add처럼 원소당 계산이 1번뿐인 커널은 연산기가 아무리 빨라도 HBM 대역폭(BW)에 묶이므로, 여러 커널을 하나로 합쳐(Fusion) 불필요한 HBM 왕복 바이트(Q)를 줄여야 빨라집니다."
+  :steps="[
+    { tag: 'STEP 1 · 3~6절', title: '연산 시간 vs 메모리 이동 시간', desc: 'FLOPs/s(계산 속도)와 GB/s(대역폭), 메모리 용량과 대역폭을 구분하고 두 시간(T_compute, T_memory) 비교 모델을 세웁니다.' },
+    { tag: 'STEP 2 · 7~8절', title: 'Vector Add & Kernel Fusion 손계산', desc: '단일 Vector Add의 병목을 숫자로 확인하고, 2단계 덧셈을 합칠 때 HBM 이동량이 24N → 16N Byte로 줄어드는 효과를 계산합니다.' },
+    { tag: 'STEP 3 · 9~11절', title: '병목 판별과 개선 방향 선택', desc: '코드만 보고도 읽기·계산·쓰기 바이트를 세어 대역폭 병목인지 연산 병목인지 판별하는 습관을 익힙니다.' }
+  ]"
+  :keyQuestions="[
+    'HBM 용량이 40 GB에서 80 GB로 2배 커진 GPU로 바꾸면, 대역폭(TB/s)이 같을 때 Vector Add 속도가 빨라질까?',
+    '두 커널(T = X + Y, Z = T + W)을 하나로 합치면 총 덧셈 횟수(FLOPs)는 그대로인데 왜 실행 시간이 1/3이나 줄어들까?',
+    '메모리 대역폭 병목에 걸린 연산을 연산 병목 구간으로 옮기려면 데이터 이동량(Q)을 어떻게 바꿔야 할까?'
+  ]"
+  :checkpoints="[
+    { id: 'cp1-check', shortLabel: '용량 vs 대역폭 O/X', anchorId: 'cp1-check' },
+    { id: 'cp2-predict', shortLabel: '커널 결합 결과 예측', anchorId: 'cp2-predict' },
+    { id: 'cp3-calc', shortLabel: 'Fusion 배수 계산', anchorId: 'cp3-calc' },
+    { id: 'cp4-quest', shortLabel: '병목 전환 시뮬레이터', anchorId: 'cp4-quest' },
+    { id: 'cp5-feynman', shortLabel: '파인만 한줄설명 & 인증', anchorId: 'cp5-feynman' }
+  ]"
+/>
+
+
+<details class="t2s-solution-toggle">
+<summary>📑 전체 절 목록 펼쳐보기 (우측 고정 목차에서도 바로 이동 가능)</summary>
 
 1. [이번 주에 알아야 할 큰 그림](#1-이번-주에-알아야-할-큰-그림)
 2. [공통 예제의 수학과 텐서](#2-공통-예제의-수학과-텐서)
@@ -32,6 +57,8 @@
 15. [해답과 해설](#15-해답과-해설)
 16. [스터디 발표와 용어 정리](#16-스터디-발표와-용어-정리)
 17. [공식 자료와 추가 읽기](#17-공식-자료와-추가-읽기)
+
+</details>
 
 ---
 
@@ -92,15 +119,6 @@
     <a class="t2s-synthesis-link" href="./researchers/jaehyeong">원문 노트 & 실측 분석 읽기 →</a>
   </div>
 </div>
-
----
-
-
-## 🎛️ 인터랙티브 실습: 연산 병목 vs 메모리 대역폭 병목 계산기
-
-> 하드웨어 대역폭(BW)과 피크 연산 성능(P), 그리고 데이터 재사용 여부에 따라 커널의 성능 상한이 어떻게 결정되는지 직접 조건을 바꿔가며 확인해 보세요.
-
-<RooflineCalculator />
 
 ---
 
@@ -576,6 +594,28 @@ $$
 
 ---
 
+
+<MicroCheckpoint
+  :week="3"
+  checkpointId="cp1-check"
+  mode="choice"
+  badge="CHECKPOINT 1 · 4~6절 오개념 함정 진단 (O/X)"
+  title="HBM 메모리 용량(GB)이 2배 큰 GPU로 바꾸면 Vector Add도 2배 빨라질까?"
+  question="동료가 '기존 40 GB HBM GPU 대신 80 GB HBM을 탑재한 모델로 업그레이드했으니(단, 메모리 대역폭 BW = 1.0 TB/s와 연산 성능 P는 동일), 이제 Vector Add 커널 실행 시간도 절반으로 줄어들 거야!'라고 말합니다. 이 주장은 맞을까요?"
+  :options="[
+    {
+      label: '⭕ 맞다 — HBM 용량이 2배 넓어졌으므로 데이터를 주고받는 속도도 2배 빨라진다.',
+      correct: false,
+      feedback: '4절의 핵심 구분을 떠올려 보세요! 용량(GB)은 창고의 크기이고, 대역폭(TB/s)은 초당 지나갈 수 있는 도로의 폭입니다.'
+    },
+    {
+      label: '❌ 틀리다 — 용량(80 GB)은 더 큰 모델/배치를 올릴 수 있게 해줄 뿐, 대역폭(BW = 1.0 TB/s)이 같다면 데이터 이동 시간(Q / BW)은 그대로다.',
+      correct: true,
+      feedback: '정확합니다! 메모리가 부족해 실행 자체가 안 되던 문제를 해결하는 것(용량)과, 초당 몇 바이트를 실어 나르느냐(대역폭)는 완전히 다른 축입니다. 바로 아래 7절에서 실제 숫자로 계산해 봅시다!'
+    }
+  ]"
+/>
+
 ## 7. 계산 예제 1 — Vector Add의 시간
 
 ### 7.1 먼저 조건을 적자
@@ -672,6 +712,33 @@ $$
 이 설명에는 계산 조건, 연산량, 이동량, 두 시간, 병목이 모두 들어 있다. “Vector Add는 메모리 연산이니까 느리다”보다 무엇을 근거로 판단했는지 분명하다.
 
 ---
+
+
+<MicroCheckpoint
+  :week="3"
+  checkpointId="cp2-predict"
+  mode="choice"
+  badge="CHECKPOINT 2 · 8절 읽기 전 결과 예측 (Predict-Before-Read)"
+  title="8절을 읽기 전에 예측해 보세요: 두 벡터 덧셈 커널을 하나로 합치면 무엇이 줄어들까요?"
+  question="길이 N인 FP32(4 Byte) 벡터들에 대해 ① T = X + Y 실행 후 ② Z = T + W 를 따로 실행하던 코드를, 단일 커널 Z = (X + Y) + W 로 결합(Fusion)하려 합니다. 이때 총 덧셈 연산량(F)과 HBM 메모리 이동량(Q)은 어떻게 변할까요?"
+  :options="[
+    {
+      label: '덧셈 연산량(F)이 2N에서 1N으로 절반 줄어들고, HBM 이동량(Q)은 24N Byte로 유지된다.',
+      correct: false,
+      feedback: '세 벡터(X, Y, W)를 더하려면 원소마다 덧셈은 여전히 두 번씩(총 2N FLOPs) 수행해야 합니다!'
+    },
+    {
+      label: '덧셈 연산량(F = 2N)은 그대로지만, 중간 벡터 T를 HBM에 쓰고(4N) 다시 읽는(4N) 과정이 사라져 HBM 이동량이 24N → 16N Byte로 줄어든다.',
+      correct: true,
+      feedback: '완벽한 예측입니다! 연산 횟수(2N)는 똑같지만 중간 결과 T의 왕복(8N Byte)이 제거되어 전체 메모리 이동량이 1/3이나 감소합니다. 바로 아래 8절 손계산으로 확인해 보세요!'
+    },
+    {
+      label: '연산량(F)과 HBM 이동량(Q) 모두 변하지 않고 오직 CPU 커널 런치 오버헤드만 줄어든다.',
+      correct: false,
+      feedback: '런치 오버헤드도 줄어들지만, 원소 수가 클 때 훨씬 결정적인 이득은 중간 텐서 T의 HBM 쓰기+읽기(8N Byte)가 통째로 사라지는 것입니다!'
+    }
+  ]"
+/>
 
 ## 8. 계산 예제 2 — 커널을 합치면 무엇이 달라질까
 
@@ -809,6 +876,22 @@ A의 `2.4 GB`는 누적 이동량이다. 필요한 배열 저장 공간을 뜻�
 
 ---
 
+
+<MicroCheckpoint
+  :week="3"
+  checkpointId="cp3-calc"
+  mode="number"
+  badge="CHECKPOINT 3 · 8절 Kernel Fusion 속도 향상 배수 검증"
+  title="24N Byte에서 16N Byte로 줄어들면 이상적 실행 속도는 몇 배 빨라질까?"
+  question="위 8절 계산에서 N = 10⁸, FP32(4 Byte), HBM 대역폭 BW = 1 TB/s일 때, 분리 실행(Q = 24N Byte = 2.4 GB)의 이상적 메모리 시간은 2.4 ms였고, 커널 결합 실행(Q = 16N Byte = 1.6 GB)의 이상적 메모리 시간은 1.6 ms였습니다. 커널 결합을 통해 이상적 실행 속도는 몇 배(2.4 ms ÷ 1.6 ms) 빨라졌나요?"
+  :expectedAnswer="1.5"
+  :tolerance="0.02"
+  unit="배"
+  placeholder="소수 첫째 자리 (예: 1.5)"
+  hint="분리 실행 시간(2.4 ms)을 결합 실행 시간(1.6 ms)으로 나누어 보세요: 2.4 / 1.6 = 24 / 16 !"
+  solutionExplanation="정확합니다! 24N / 16N = 1.5배 빨라집니다(실행 시간 기준으로는 2.4 ms → 1.6 ms로 33.3% 단축). 대역폭 병목 커널에서는 HBM 이동 바이트 비율이 곧바로 실행 시간 비율을 결정합니다!"
+/>
+
 ## 9. 병목을 해석하고 개선 방향 고르기
 
 ### 9.1 Compute-bound와 Memory-bound
@@ -870,6 +953,15 @@ Vector Add에서 연산 성능 P만 두 배로 하면 다음과 같다.
 ```
 
 후자의 설명은 크기·자료형·구현·하드웨어가 바뀌면 다시 계산해야 한다는 사실을 남긴다.
+
+---
+
+
+## 🎛️ 실습 검증: 메모리 병목에서 연산 병목으로 탈출하기 (Checkpoint 4)
+
+> 원소별 연산(Vector Add)은 아무리 묶어도 한 번 읽은 데이터로 계산을 몇 번밖에 하지 못하지만, 다음 주차로 이어지는 **행렬곱(MatMul)** 은 온칩 메모리에 올린 타일 크기를 키울수록 데이터 재사용이 늘어 **어느 순간 메모리 대역폭 병목에서 연산 병목으로 전환**됩니다. 아래 시뮬레이터에서 직접 타일 크기를 눌러 그 전환 지점을 찾아보세요!
+
+<RooflineCalculator :week="3" checkpointId="cp4-quest" questType="week03" />
 
 ---
 
@@ -1424,6 +1516,24 @@ $$
 ---
 
 </details>
+
+
+## 🏅 Week 03 완독 점검 & 인증 패스포트 (Checkpoint 5)
+
+<FeynmanPassport
+  :week="3"
+  weekTitle="커널의 시간은 어디에서 소비되는가 — 연산 시간 vs 메모리 이동 시간"
+  checkpointId="cp5-feynman"
+  :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
+  promptQuestion="질문: Vector Add(Z = X + Y)처럼 단순한 원소별 커널은 GPU의 연산 성능(TFLOPs/s)을 높여도 거의 빨라지지 않습니다. 그 이유와 실제 실행 시간을 줄이는 핵심 방법을 '두 시간(T_compute, T_memory)' 관점에서 설명해 보세요."
+  modelAnswer="Vector Add는 원소 하나당 HBM에서 12 Byte(읽기 8B + 쓰기 4B)를 옮기면서 덧셈은 단 1 FLOP만 수행하므로, 데이터 이동 시간(T_memory = Q/BW)이 연산 시간(T_compute = F/P)보다 수십 배 길어 대역폭 병목에 걸립니다. 따라서 연산기(P)를 키워도 T_memory에 막혀 빨라지지 않으며, 앞뒤 연산을 커널 결합(Fusion)해 중간 텐서의 HBM 왕복 데이터양(Q) 자체를 줄여야 실행 시간이 단축됩니다."
+  :selfCheckItems="[
+    '병목 원인 명시: 데이터 이동 시간(Q/BW)이 연산 시간(F/P)보다 훨씬 커서 메모리 대역폭 병목(Memory-Bound) 상태임을 설명했다.',
+    '해결 방향 명시: 연산 성능(P)이 아니라 커널 결합(Fusion)이나 재사용으로 HBM 이동 바이트(Q)를 줄여야 한다는 점을 짚었다.'
+  ]"
+/>
+
+---
 
 ## 16. 스터디 발표와 용어 정리
 

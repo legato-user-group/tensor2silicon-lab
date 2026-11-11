@@ -1,13 +1,38 @@
 <WeekNavBar :week="7" topic="Tiled MatMul과 컴파일 과정" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'NVIDIA A100 IR·SASS 실측'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': 'RTX 5090 (sm_120) 실측 해부'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'L2 그룹핑 손계산 & IR 대응표'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '알고리즘 & MLIR 하향 변환 종합'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': '핵심 코드 & 컴파일 단계 요약'}]" />
 
-### Tiled MatMul과 컴파일 과정 — 2차원 타일 재사용에서 GPU 기계어까지
+# Tiled MatMul과 컴파일 과정 — 2차원 타일 재사용에서 GPU 기계어까지
 
 > **7주차 핵심 질문**  
 > Python으로 작성한 2차원 Tiled MatMul 커널은 어떻게 타일 단위로 데이터를 재사용하며, 어떤 컴파일 단계를 거쳐 GPU 기계어로 바뀔까?
 
 ---
 
-## 목차
+
+<TldrMapCard
+  :week="7"
+  intuition="4주차에 손으로 유도한 2D 타일 재사용 수식은 Triton에서 단 10줄의 K축 포인터 전진 루프로 구현됩니다. 여기에 블록 실행 순서(Grouped Ordering)로 L2 캐시 적중률을 높이고, 컴파일러가 TTIR → TTGIR → PTX → SASS 단계를 거치며 비동기 복사(cp.async)와 Tensor Core(mma.sync) 기계어로 변환합니다."
+  :steps="[
+    { tag: 'STEP 1 · 3~4절', title: '2D 포인터 블록과 L2 Grouped Ordering', desc: '브로드캐스팅으로 2D 타일 주소를 만들고, 프로그램 실행 순서 재배치만으로 L2 캐시 재사용을 높이는 원리를 배웁니다.' },
+    { tag: 'STEP 2 · 5~6절', title: 'Autotune과 다중 버퍼 SRAM 손계산', desc: '타일 후보별 산술 강도(Roofline)와 파이프라인 스테이지(num_stages)에 따른 Shared Memory 용량 한계를 직접 계산합니다.' },
+    { tag: 'STEP 3 · 7~8절', title: '다단계 IR(TTIR→SASS) 실측 해부', desc: 'Python 커널이 어느 IR 단계에서 워프 레이아웃(#mma)과 하드웨어 기계어(HMMA)로 구체화되는지 추적합니다.' }
+  ]"
+  :keyQuestions="[
+    '타일 크기는 똑같은데 프로그램 실행 순서만 Grouped Ordering으로 바꿨을 뿐인데 왜 HBM 트래픽이 줄어들까?',
+    '출력 타일(BM×BN)을 고정한 채 K축 폭(BK)과 num_stages를 키우면 산술 강도와 Shared Memory 사용량은 각각 어떻게 변할까?',
+    'Triton 컴파일 파이프라인 6단계 중 텐서에 #mma / #shared 하드웨어 레이아웃과 비동기 복사가 처음 도입되는 단계는 어디일까?'
+  ]"
+  :checkpoints="[
+    { id: 'cp1-check', shortLabel: 'L2 그룹핑 O/X', anchorId: 'cp1-check' },
+    { id: 'cp2-predict', shortLabel: 'BK 변화 결과 예측', anchorId: 'cp2-predict' },
+    { id: 'cp3-calc', shortLabel: '파이프라인 SRAM 계산', anchorId: 'cp3-calc' },
+    { id: 'cp4-quest', shortLabel: 'IR 파이프라인 탐정 미션', anchorId: 'cp4-quest' },
+    { id: 'cp5-feynman', shortLabel: '파인만 한줄설명 & 인증', anchorId: 'cp5-feynman' }
+  ]"
+/>
+
+
+<details class="t2s-solution-toggle">
+<summary>📑 전체 절 목록 펼쳐보기 (우측 고정 목차에서도 바로 이동 가능)</summary>
 
 1. [이번 주에 알아야 할 큰 그림](#1-이번-주에-알아야-할-큰-그림)
 2. [공통 예제와 계산 조건](#2-공통-예제와-계산-조건)
@@ -24,6 +49,8 @@
 13. [해답과 해설](#13-해답과-해설)
 14. [스터디에서 설명하고 함께 점검하기](#14-스터디에서-설명하고-함께-점검하기)
 15. [읽을 자료와 검증 범위](#15-읽을-자료와-검증-범위)
+
+</details>
 
 ---
 
@@ -84,17 +111,6 @@
     <a class="t2s-synthesis-link" href="./researchers/jaehyeong">원문 노트 & 실측 분석 읽기 →</a>
   </div>
 </div>
-
----
-
-
-## 🎛️ 인터랙티브 실습 1: 2D Tiled MatMul & 다단계 IR 파이프라인 탐색기
-
-> 아래 두 가지 인터랙티브 도구를 통해 **① 타일 크기(`BM, BN, BK`)와 파이프라인 단계(`num_stages`)에 따른 Shared Memory 요구량 및 Roofline 성능 상한**을 계산하고, **② Python 코드가 TTIR → TTGIR → LLVM IR → PTX → SASS로 변환되는 과정(A100 vs RTX 5090 실측 비교)**을 단계별로 확인해 보세요.
-
-<IrPipelineViewer />
-
-<RooflineCalculator />
 
 ---
 
@@ -691,6 +707,28 @@ pid_n = (pid % num_pid_in_group) // group_size_m
 
 ---
 
+
+<MicroCheckpoint
+  :week="7"
+  checkpointId="cp1-check"
+  mode="choice"
+  badge="CHECKPOINT 1 · 3~4절 오개념 함정 진단 (O/X)"
+  title="Grouped Ordering(GROUP_SIZE_M)은 어떻게 타일 크기를 안 바꾸고도 성능을 높일까?"
+  question="4절에서 출력 타일 크기(BM, BN)는 그대로 둔 채, 프로그램 ID를 2차원 타일 좌표(pid_m, pid_n)로 매핑하는 순서만 Row-major에서 Grouped Ordering으로 바꿨습니다. 이 기법이 성능을 높이는 진짜 원리는 무엇일까요?"
+  :options="[
+    {
+      label: '프로그램 실행 순서를 묶어 주면 일부 타일의 내적 곱셈을 생략할 수 있어 총 FLOPs가 줄어든다.',
+      correct: false,
+      feedback: '실행 순서를 어떻게 바꾸든 모든 출력 타일 C[pid_m, pid_n]을 구하기 위한 총 연산량(2MNK)과 각 블록의 계산량은 100% 동일합니다!'
+    },
+    {
+      label: '동시에 실행되는 프로그램 블록들이 인접한 M·N 영역에 모이게 되어, 같은 A 행 타일과 B 열 타일을 칩 공유 L2 캐시에서 함께 재사용함으로써 HBM 실효 읽기 트래픽을 줄인다.',
+      correct: true,
+      feedback: '정확합니다! 한 행을 끝까지 도는 Row-major 순서에서는 B의 열 타일 종류가 너무 많아져 L2 캐시에서 밀려나지만, GROUP_SIZE_M 단위로 묶어 돌면 적은 수의 A·B 타일을 여러 SM이 L2 캐시 위에서 높은 적중률로 공유할 수 있습니다.'
+    }
+  ]"
+/>
+
 ## 5. 메타파라미터와 자동 튜닝(`@triton.autotune`) — 타일 크기와 파이프라인 설정은 어떻게 고를까
 
 이 절에서는 스터디 세 번째 주제(**③ 메타파라미터와 자동 튜닝**)를 다룬다. 먼저 Tutorial 03의 완성된 커널과 래퍼 코드 전문을 읽고, 그 안에 등장하는 `triton.Config`의 인자들이 하드웨어 자원과 성능에 어떤 영향을 주는지 정리한다.
@@ -946,6 +984,28 @@ GPU의 각 SM이 가진 **온칩 자원(Shared Memory 용량과 32비트 레지�
 
 ---
 
+
+<MicroCheckpoint
+  :week="7"
+  checkpointId="cp2-predict"
+  mode="choice"
+  badge="CHECKPOINT 2 · 6절 읽기 전 결과 예측 (Predict-Before-Read)"
+  title="6절을 읽기 전에 예측해 보세요: 출력 타일(128×128)은 고정하고 BK만 32 → 64로 키우면?"
+  question="4096×4096 FP16 행렬곱에서 출력 타일 크기(BM = 128, BN = 128)는 그대로 두고 K축 타일 폭(BLOCK_SIZE_K)만 32에서 64로 2배 키웠습니다. 캐시 미포함 이상적 타일 모델에서 ① 전체 HBM 입력 읽기량(Q_read)과 ② 1단계 Shared Memory 타일 크기는 각각 어떻게 변할까요?"
+  :options="[
+    {
+      label: 'HBM 입력 읽기량(Q_read)이 절반으로 줄어들고, 1단계 Shared Memory 크기는 그대로 유지된다.',
+      correct: false,
+      feedback: '정반대입니다! BK가 2배 커지면 K 루프 반복 횟수는 절반이 되지만 한 번에 읽는 조각 폭이 2배가 되어 블록당 총 읽는 면적(BM×K + K×BN)은 변하지 않습니다.'
+    },
+    {
+      label: '이상적 HBM 입력 읽기량(Q_read)은 그대로 유지되고, 한 번에 온칩에 올리는 A·B 타일 폭이 넓어져 1단계 Shared Memory 요구량이 2배(16 KiB → 32 KiB)로 커진다.',
+      correct: true,
+      feedback: '완벽합니다! 산술 강도의 큰 틀은 출력 타일(BM, BN)이 결정하고, BK와 num_stages는 한 번의 루프 입도와 온칩 Shared Memory 파이프라인 용량을 결정합니다. 바로 아래 6절 계산표에서 확인해 보세요!'
+    }
+  ]"
+/>
+
 ## 6. 계산 예제 2 — `4096×4096` FP16 Tiled MatMul에서 타일 설정과 온칩 메모리·Roofline 비교
 
 이제 스터디 공동 과제의 두 번째 핵심 계산인 **`M = N = K = 4096` 정사각 행렬곱(FP16 입출력, FP32 누산)**에 대해 Tutorial 03의 세 가지 `triton.Config` 후보를 손계산으로 비교해 보자.
@@ -1066,6 +1126,22 @@ GPU의 각 SM이 가진 **온칩 자원(Shared Memory 용량과 32비트 레지�
    블록(CTA)당 최대 Shared Memory가 **`64 KiB`(`65,536 Byte`)**인 GPU(예: 무료 Colab에서 흔히 배정받는 Tesla T4 `sm_75`)에서 이 세 후보를 실행하면, **후보 3은 파이프라인 입력 버퍼만 `144 KiB`(`147,456 Byte`)를 요구하므로 `shared > max_shared`에 걸려 `OutOfResources` 예외로 탈락**한다. 이 장치에서는 `64 KiB` 이하인 후보 1(`30 KiB`)과 후보 2(`64 KiB`)만 살아남으며, 그중 산술 강도가 높은 후보 2(`I = 63.02 FLOP/Byte`, `T_ideal = 2.1810 ms`)가 최선이 된다. 바로 이것이 `@triton.autotune`에 크고 작은 후보들을 함께 넣어 두는 실전적인 이유다.
 
 ---
+
+
+<MicroCheckpoint
+  :week="7"
+  checkpointId="cp3-calc"
+  mode="number"
+  badge="CHECKPOINT 3 · 6절 다중 스테이지 Shared Memory 용량 계산"
+  title="후보 2(128×128, BK=32, FP16)에서 num_stages=4일 때 파이프라인 버퍼 크기는 몇 KiB일까?"
+  question="6.2절 후보 2(BM = 128, BN = 128, BK = 32, FP16 = 2 Byte)에서 1단계 입력 타일 크기는 A 타일(128×32×2B = 8 KiB) + B 타일(32×128×2B = 8 KiB) = 총 16 KiB였습니다. 비동기 복사와 연산을 겹치기 위해 소프트웨어 파이프라이닝 단계 수를 num_stages = 4로 설정할 때(교안 식 S_pipe = num_stages × S_1stage 기준), 필요한 파이프라인 타일 버퍼 용량은 몇 KiB인가요?"
+  :expectedAnswer="64"
+  :tolerance="0.1"
+  unit="KiB"
+  placeholder="정수 입력"
+  hint="1단계 A+B 합계 용량(16 KiB)에 스테이지 수(num_stages = 4)를 곱해 보세요: 4 × 16 KiB !"
+  solutionExplanation="정확합니다! 4 × 16 KiB = 64 KiB입니다. 교육용 SM 한도(96 KiB) 안에 여유 있게 들어오므로 컴파일과 실행이 가능하지만, 만약 같은 128×128에서 BK=64, num_stages=4로 잡으면 4 × 32 = 128 KiB > 96 KiB가 되어 OutOfResources 오류가 발생합니다!"
+/>
 
 ## 7. Triton 컴파일 파이프라인과 IR 계층 — Python 함수는 어떤 단계를 거쳐 GPU 기계어가 될까
 
@@ -1366,6 +1442,17 @@ $$
 | `TRITON_ALWAYS_COMPILE=1` | 디스크 캐시를 무시하고 강제로 다시 컴파일할 때 | `~/.triton/cache`에 이미 컴파일된 파일이 있으면 덤프가 생략될 수 있으므로, `TRITON_KERNEL_DUMP=1`과 함께 켜면 항상 새로 컴파일하며 덤프를 남긴다. |
 | `MLIR_ENABLE_DUMP=1` (또는 `=커널이름`) | `make_ttir`, `make_ttgir` 내부의 **개별 패스 전후** 변화를 볼 때 | 단계 끝의 결과만 보여주는 `.asm`과 달리, `add_coalesce`, `add_accelerate_matmul`, `add_pipeline` 등 **각 MLIR 패스가 실행되기 직전의 IR**을 전부 출력한다. |
 | `TRITON_INTERPRET=1` | GPU 없이 CPU에서 인덱싱·마스크 값을 디버깅할 때 | 컴파일 파이프라인(`TTIR → ... → CUBIN`)을 완전히 우회해 NumPy 기반 CPU 해석기로 커널을 순차 실행한다. 파이썬 `print`/`breakpoint()`를 쓸 수 있지만, **`.asm` 확인이나 속도 측정에는 사용할 수 없다.** |
+
+---
+
+
+## 🎛️ 실습 검증: 다단계 IR 파이프라인 탐정 미션 & 시뮬레이터 (Checkpoint 4)
+
+> 방금 7~8절에서 배운 Triton 컴파일 파이프라인(`Python` → `TTIR` → `TTGIR` → `LLVM IR` → `PTX` → `SASS`)의 실제 산출물을 아래 탐색기에서 직접 클릭해 비교하고 **탐정 미션**을 통과해 보세요! 이어지는 Roofline 계산기에서는 A100·RTX 5090 프리셋도 자유롭게 실험할 수 있습니다.
+
+<IrPipelineViewer :week="7" checkpointId="cp4-quest" />
+
+<RooflineCalculator />
 
 ---
 
@@ -1919,6 +2006,24 @@ Tutorial 03의 `matmul_kernel`로 **`M = 500, N = 600, K = 300`**인 FP16 행렬
 ---
 
 </details>
+
+
+## 🏅 Week 07 완독 점검 & 인증 패스포트 (Checkpoint 5)
+
+<FeynmanPassport
+  :week="7"
+  weekTitle="Tiled MatMul과 컴파일 과정 — 2D 타일 재사용에서 GPU 기계어까지"
+  checkpointId="cp5-feynman"
+  :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
+  promptQuestion="질문: 프로그래머가 Python으로 작성한 단일 @triton.jit 행렬곱 커널이 코드 수정 없이도 A100(sm_80)과 RTX 5090(sm_120) 양쪽에서 높은 성능의 Tensor Core 기계어로 실행될 수 있는 이유를 'Autotune'과 '다단계 IR(TTIR → TTGIR)' 관점에서 설명해 보세요."
+  modelAnswer="프로그래머는 블록 수준 알고리즘(포인터 전진과 tl.dot)만 작성해 하드웨어 독립적인 TTIR로 표현하고, 칩마다 다른 최적 타일 크기와 파이프라인 단계(BM, BN, BK, num_stages, num_warps)는 @triton.autotune이 실측으로 선택합니다. 이후 컴파일러 백엔드가 타겟 아키텍처(sm_80, sm_120)에 맞춰 TTGIR 단계에서 워프 분할(#mma)·Shared Memory 스위즐·비동기 복사를 자동 삽입하고 PTX/SASS 기계어로 하향 변환하기 때문입니다."
+  :selfCheckItems="[
+    '알고리즘과 튜닝 분리 언급: 커널 코드는 블록 단위로 유지하고 칩별 최적 타일/워프/스테이지 설정은 @triton.autotune으로 탐색한다는 점을 설명했다.',
+    '다단계 IR 하향 변환 언급: 하드웨어 독립적 TTIR에서 타겟 GPU 종속 레이아웃(#mma, #shared)과 비동기 파이프라인을 입히는 TTGIR → PTX/SASS 변환 역할을 짚었다.'
+  ]"
+/>
+
+---
 
 ## 14. 스터디에서 설명하고 함께 점검하기
 

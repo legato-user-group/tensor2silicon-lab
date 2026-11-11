@@ -1,6 +1,6 @@
 <WeekNavBar :week="4" topic="Roofline과 Tiling" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'Roofline & 타일 크기별 분석'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': '4×4 & 4096×4096 완전 해설'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '2D Block Tiling 직관'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '이론 유도 & 연습문제 풀이'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': 'Roofline & Tiling 핵심 노트'}]" />
 
-### Roofline과 Tiling — 같은 계산을 하면서 데이터를 덜 옮기는 법
+# Roofline과 Tiling — 같은 계산을 하면서 데이터를 덜 옮기는 법
 
 > **4주차 핵심 질문**  
 > 같은 계산을 하면서 데이터를 덜 읽어오면, 커널은 얼마나 빨라질 수 있을까?
@@ -9,7 +9,32 @@
 
 ---
 
-## 목차
+
+<TldrMapCard
+  :week="4"
+  intuition="행렬곱의 총 연산 횟수(2N³)는 단 1번도 줄일 수 없지만, 느린 HBM에서 가져온 입력 조각을 빠른 온칩 메모리(Shared Memory·레지스터)에 올려두고 여러 출력 계산에 재사용(Tiling)하면 HBM 왕복량이 1/t로 줄어들어 커널이 수십 배 빨라집니다."
+  :steps="[
+    { tag: 'STEP 1 · 3~5절', title: '산술 강도와 Roofline 읽기', desc: '1 Byte를 옮길 때 몇 FLOP을 계산하는지(I = F/Q) 구하고, 대역폭 병목과 연산 병목의 경계(분기점 I*)를 찾습니다.' },
+    { tag: 'STEP 2 · 6~8절', title: 'Tiling 재사용 손계산', desc: '출력 타일(BM×BN)을 고정하고 K축으로 누적할 때 왜 HBM 읽기량이 8N³/t로 줄어드는지 손으로 직접 세어 봅니다.' },
+    { tag: 'STEP 3 · 9~11절', title: '온칩 메모리 한계와 BK 분할', desc: '타일을 무조건 키울 수 없는 두 가지 물리적 한계(SRAM 용량, SM 병렬성)와 K축 폭(BK) 조절 원리를 이해합니다.' }
+  ]"
+  :keyQuestions="[
+    '산술 강도(I = F/Q)가 하드웨어 분기점(I* = P/BW)보다 왼쪽에 있을 때, 연산 유닛(P)만 2배 빠른 칩으로 바꾸면 왜 속도가 그대로일까?',
+    '4096×4096 행렬곱에서 타일 크기를 키울 때 연산량(F)은 그대로인데 어떻게 성능 상한이 올라갈까?',
+    '출력 타일(BM×BN)은 크게 유지하면서 온칩 Shared Memory 사용량만 줄이려면 어떤 축의 폭을 조절해야 할까?'
+  ]"
+  :checkpoints="[
+    { id: 'cp1-roofline', shortLabel: '오개념 진단 O/X', anchorId: 'cp1-roofline' },
+    { id: 'cp2-predict', shortLabel: '타일링 결과 예측', anchorId: 'cp2-predict' },
+    { id: 'cp3-calc', shortLabel: '손계산 숫자 빈칸', anchorId: 'cp3-calc' },
+    { id: 'cp4-quest', shortLabel: '시뮬레이터 미션', anchorId: 'cp4-quest' },
+    { id: 'cp5-feynman', shortLabel: '파인만 한줄설명 & 인증', anchorId: 'cp5-feynman' }
+  ]"
+/>
+
+
+<details class="t2s-solution-toggle">
+<summary>📑 전체 절 목록 펼쳐보기 (우측 고정 목차에서도 바로 이동 가능)</summary>
 
 1. [이번 주에 알아야 할 큰 그림](#1-이번-주에-알아야-할-큰-그림)
 2. [공통 예제의 수학과 계산 조건](#2-공통-예제의-수학과-계산-조건)
@@ -28,6 +53,8 @@
 15. [해답과 해설](#15-해답과-해설)
 16. [스터디에서 설명하고 함께 점검하기](#16-스터디에서-설명하고-함께-점검하기)
 17. [읽을 자료와 검증 범위](#17-읽을-자료와-검증-범위)
+
+</details>
 
 ---
 
@@ -88,32 +115,6 @@
     <a class="t2s-synthesis-link" href="./researchers/jaehyeong">원문 노트 & 실측 분석 읽기 →</a>
   </div>
 </div>
-
----
-
-
-## 🎛️ 인터랙티브 Roofline & Tiling 시뮬레이터
-
-> 4주차 공통 예제(`N = 4096`, `FP32`, `P = 20 TFLOPs/s`, `BW = 1 TB/s`)에서 타일 크기(`16×16` ~ `256×256`)를 바꿀 때 **HBM 메모리 이동량(Q)**과 **산술 강도(I = F/Q)**가 어떻게 변하며 언제 연산 병목 구간에 진입하는지 직접 실험해 보세요.
-
-<RooflineCalculator />
-
-### 📊 4주차 핵심 시각화 도표 모음
-
-| Roofline 성능 상한과 재사용 조건 | 4×4 행렬곱의 2×2 출력 타일 누적 과정 |
-| :---: | :---: |
-| ![Roofline 그래프](/assets/week04/roofline.svg) | ![Tiling 누적 과정](/assets/week04/tiling.svg) |
-
-<details class="t2s-solution-toggle">
-<summary>🖼️ 추가 시각 자료 펼치기 (타일 저장 공간·BK 폭 비교·하드웨어 변화에 따른 Roofline 이동)</summary>
-
-![타일 저장 공간과 병렬성](/assets/week04/lecture-visuals/tile_storage_parallelism.svg)
-
-![BK 폭 비교](/assets/week04/lecture-visuals/bk_width_comparison.svg)
-
-![하드웨어 변화와 Roofline](/assets/week04/lecture-visuals/roofline_hardware_changes.svg)
-
-</details>
 
 ---
 
@@ -428,6 +429,54 @@ BW를 두 배로 하면 로그 그래프의 대역폭 선은 위로 평행 이�
 
 ---
 
+
+<MicroCheckpoint
+  :week="4"
+  checkpointId="cp1-roofline"
+  mode="choice"
+  badge="CHECKPOINT 1 · 3~5절 오개념 함정 진단 (O/X)"
+  title="연산 성능이 2배인 신형 GPU로 바꾸면 내 커널도 2배 빨라질까?"
+  question="현재 하드웨어 조건(BW = 1 TB/s, P = 20 TFLOPs/s, 분기점 I* = 20)에서 산술 강도가 I = 8 FLOP/Byte인 커널을 실행 중입니다. 동료가 'HBM 대역폭(1 TB/s)은 동일하지만 피크 연산 성능만 P = 40 TFLOPs/s로 2배 높은 신형 칩으로 바꾸면 이 커널의 성능 상한도 2배 올라갈 거야!'라고 주장합니다. 이 주장은 맞을까요?"
+  :options="[
+    {
+      label: '⭕ 맞다 — 하드웨어 피크 연산 성능(P)이 2배가 되었으므로 커널 상한도 8에서 16 TFLOPs/s로 올라간다.',
+      correct: false,
+      feedback: '5.4절 표를 다시 떠올려 보세요! P가 20→40으로 커지면 수평 지붕만 높아지고 분기점(I* = 40)이 오른쪽으로 멀어질 뿐, 대역폭 경사면(BW × I)은 그대로입니다.'
+    },
+    {
+      label: '❌ 틀리다 — 현재 대역폭 병목 구간(I = 8 < 20)에 있으므로, BW나 I를 키우지 않고 P만 높여도 상한은 8 TFLOPs/s 그대로다.',
+      correct: true,
+      feedback: '정확합니다! R = min(P, BW × I)에서 min(40, 1 × 8) = 8 TFLOPs/s이므로, 데이터 이동(BW)에 막힌 커널은 연산 유닛만 늘려도 빨라지지 않습니다. 그래서 다음 6절의 Tiling(데이터 재사용으로 I 자체를 오른쪽으로 이동시키는 기법)이 필수적입니다!'
+    }
+  ]"
+/>
+
+<MicroCheckpoint
+  :week="4"
+  checkpointId="cp2-predict"
+  mode="choice"
+  badge="CHECKPOINT 2 · 6절 읽기 전 결과 예측 (Predict-Before-Read)"
+  title="6절을 읽기 전에 먼저 예측해 보세요: 타일을 키우면 계산 횟수(FLOPs)가 줄어들까요?"
+  question="4096×4096 행렬곱(C = A @ B)에서 출력 타일 크기를 32×32에서 128×128로 4배(면적 16배) 키우면, GPU가 수행하는 총 곱셈·덧셈 연산량(F, FLOPs)은 어떻게 변할까요?"
+  :options="[
+    {
+      label: '타일 한 변이 4배 커졌으므로 총 연산량(F)도 1/4로 줄어든다.',
+      correct: false,
+      feedback: '아닙니다! 1/4로 줄어드는 것은 연산량(F)이 아니라 HBM 메모리 읽기량(Q_read)입니다.'
+    },
+    {
+      label: '타일 면적이 16배 커졌으므로 총 연산량(F)이 1/16로 줄어든다.',
+      correct: false,
+      feedback: '타일은 계산 순서를 묶는 단위일 뿐, 결과 행렬 C의 각 원소를 구하는 내적 연산을 생략하지는 않습니다.'
+    },
+    {
+      label: '총 연산량(F = 2N³)은 단 1 FLOP도 변하지 않고 완전히 똑같다.',
+      correct: true,
+      feedback: '정답입니다! Tiling은 계산 횟수(F)를 줄이는 마법이 아니라, 같은 F를 수행하면서 느린 HBM에서 데이터를 읽어오는 횟수(Q)만 줄여 산술 강도(I = F/Q)를 끌어올리는 기법입니다. 바로 아래 6~8절에서 그 구조를 확인해 보세요!'
+    }
+  ]"
+/>
+
 ## 6. Tiling은 무엇을 나누고 무엇을 유지할까
 
 ### 6.1 출력 타일을 먼저 정한다
@@ -709,6 +758,22 @@ $$
 
 ---
 
+
+<MicroCheckpoint
+  :week="4"
+  checkpointId="cp3-calc"
+  mode="number"
+  badge="CHECKPOINT 3 · 8절 손계산 1단계 변형 검증"
+  title="타일 한 변(t)을 64에서 256으로 4배 키우면 입력 읽기량은 몇 GiB가 될까?"
+  question="위 8.4~8.5절에서 N = 4096, FP32(4 Byte)일 때 전체 입력 읽기량 식은 Q_read = 8N³ / t 였고, t = 64일 때 Q_read = 8,589,934,592 Byte = 정확히 8 GiB(2³⁰ Byte 기준)였습니다. 만약 같은 조건에서 정사각 타일 크기만 t = 256으로 키운다면, 전체 입력 읽기량 Q_read는 몇 GiB가 될까요?"
+  :expectedAnswer="2"
+  :tolerance="0.01"
+  unit="GiB"
+  placeholder="정수 입력"
+  hint="Q_read = 8N³ / t 에서 N은 고정되어 있고 분모 t만 64에서 256으로 4배 커졌습니다. 8 GiB ÷ 4를 계산해 보세요!"
+  solutionExplanation="정확합니다! 분모 t가 64 → 256으로 4배 커지므로 HBM 입력 읽기량은 8 GiB → 2 GiB로 정확히 1/4로 줄어듭니다. (단, 8.6절에서 봤듯 t=128에서 이미 연산 상한 6.872 ms에 도달했으므로 t=256으로 더 키워도 이상적 실행 시간은 6.872 ms 아래로 내려가지 않습니다!)"
+/>
+
 ## 9. 재사용 가정이 달라지면 산술 강도도 달라진다
 
 ### 9.1 t가 커질 때 I는 어떻게 변할까?
@@ -879,6 +944,32 @@ acc 초기화는 K 반복문 밖에 있다. 안에서 매번 0으로 만들면 �
 특히 Shared Memory로 협력하는 코드에는 데이터 준비와 버퍼 재사용의 순서를 보장하는 장치가 필요하다. 여기서는 그 비용을 산술 강도 식에 넣지 않았다. [CUDA의 행렬곱·Shared Memory 예제](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#shared-memory-in-matrix-multiplication-c-ab)
 
 Triton의 `BLOCK_SIZE_M/N/K`도 같은 세 방향을 구분한다. 공식 튜토리얼의 자료형과 실제 커널 코드를 그대로 이번 FP32 가상 조건의 성능 근거로 쓰지 않는다. 이번 주에는 첫 블록 알고리즘까지만 읽어도 된다.
+
+---
+
+
+## 🎛️ 실습 검증: 인터랙티브 Roofline & Tiling 미션 (Checkpoint 4)
+
+> 방금 10~11절에서 배운 **핵심 원리** — *"출력 타일(`BM×BN`)은 산술 강도를 결정하고, K 방향 폭(`BK`)과 파이프라인 단계는 온칩 Shared Memory 사용량을 좌우한다"* — 를 아래 시뮬레이터에서 직접 손으로 조작해 증명해 보세요!
+
+<RooflineCalculator :week="4" checkpointId="cp4-quest" questType="week04" />
+
+### 📊 4주차 핵심 시각화 도표 모음
+
+| Roofline 성능 상한과 재사용 조건 | 4×4 행렬곱의 2×2 출력 타일 누적 과정 |
+| :---: | :---: |
+| ![Roofline 그래프](/assets/week04/roofline.svg) | ![Tiling 누적 과정](/assets/week04/tiling.svg) |
+
+<details class="t2s-solution-toggle">
+<summary>🖼️ 추가 시각 자료 펼치기 (타일 저장 공간·BK 폭 비교·하드웨어 변화에 따른 Roofline 이동)</summary>
+
+![타일 저장 공간과 병렬성](/assets/week04/lecture-visuals/tile_storage_parallelism.svg)
+
+![BK 폭 비교](/assets/week04/lecture-visuals/bk_width_comparison.svg)
+
+![하드웨어 변화와 Roofline](/assets/week04/lecture-visuals/roofline_hardware_changes.svg)
+
+</details>
 
 ---
 
@@ -1165,6 +1256,24 @@ $$
 ---
 
 </details>
+
+
+## 🏅 Week 04 완독 점검 & 인증 패스포트 (Checkpoint 5)
+
+<FeynmanPassport
+  :week="4"
+  weekTitle="Roofline과 Tiling — 산술 강도와 온칩 데이터 재사용"
+  checkpointId="cp5-feynman"
+  :allCheckpointIds="['cp1-roofline', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
+  promptQuestion="질문: 타일 크기를 키울수록 HBM 이동량(Q)이 줄어 산술 강도가 높아지는데도, 실제 GPU 커널에서 타일 크기를 무한정 크게 잡을 수 없는 하드웨어적 이유 2가지는 무엇인가요?"
+  modelAnswer="첫째, 타일이 커질수록 입력 타일 버퍼(Shared Memory)와 누산값(레지스터)이 요구하는 온칩 메모리 용량이 급증하여 SM당 하드웨어 한도를 초과하거나 레지스터 스필(Spill)이 발생합니다. 둘째, 전체 행렬을 큰 타일로 나누면 생성되는 총 출력 타일(블록/CTA) 개수가 줄어들고 블록당 자원 점유가 커져 여러 SM에 고르게 일을 나누는 병렬성(Occupancy)이 떨어집니다."
+  :selfCheckItems="[
+    '온칩 저장 공간 한계 언급: Shared Memory 또는 레지스터 파일 용량 한계(초과/스필 위험)를 설명했다.',
+    '병렬성(일감 분배) 감소 언급: 총 출력 타일(CTA) 수가 줄거나 SM당 동시 실행 블록 수(Occupancy)가 줄어드는 점을 설명했다.'
+  ]"
+/>
+
+---
 
 ## 16. 스터디에서 설명하고 함께 점검하기
 

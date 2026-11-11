@@ -1,5 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useMasteryStore } from '../composables/useMasteryStore'
+
+const props = defineProps<{
+  week?: number
+  checkpointId?: string
+  anchorId?: string
+}>()
+
+const { isCompleted, markCompleted } = useMasteryStore()
+const questFeedback = ref<{ ok: boolean; msg: string } | null>(null)
+const questSolved = computed(() =>
+  props.week && props.checkpointId ? isCompleted(props.week, props.checkpointId) : false
+)
 
 interface StageInfo {
   id: string
@@ -116,10 +129,49 @@ HMMA.16816.F32 R8, R4, R6, R8 ;                   // Tensor Core FP16xFP16 -> FP
 ]
 
 const activeIdx = ref(0)
+
+function selectStage(idx: number) {
+  activeIdx.value = idx
+  questFeedback.value = null
+}
+
+function verifyStageQuest() {
+  if (activeIdx.value === 2) {
+    questFeedback.value = {
+      ok: true,
+      msg: '정답입니다! Stage 2(TTIR)까지는 하드웨어 독립적인 블록 텐서였지만, Stage 3(TTGIR)로 내려오면서 워프 분할(#mma), 스위즐된 Shared Memory(#shared_a), 그리고 다중 버퍼 비동기 복사(ttg.async_copy_global_to_local)가 처음으로 구체화됩니다!'
+    }
+    if (props.week && props.checkpointId) {
+      markCompleted(props.week, props.checkpointId)
+    }
+  } else if (activeIdx.value < 2) {
+    questFeedback.value = {
+      ok: false,
+      msg: `선택하신 Stage ${activeIdx.value + 1}(${stages[activeIdx.value].name})은 아직 하드웨어 독립적인 블록 추상화 단계입니다! 코드 조각을 보면 아직 #mma / #shared 레이아웃이나 비동기 복사 명령이 없습니다. 한 단계 더 내려가 보세요!`
+    }
+  } else {
+    questFeedback.value = {
+      ok: false,
+      msg: `선택하신 Stage ${activeIdx.value + 1}(${stages[activeIdx.value].name})은 이미 블록 텐서가 개별 스레드 명령어(cp.async, mma.sync, HMMA)로 모두 풀린 단계입니다! MLIR 텐서 타입 뒤에 #mma / #shared 레이아웃이 '처음으로' 부착되는 단계를 찾아보세요.`
+    }
+  }
+}
 </script>
 
 <template>
-  <div class="t2s-ir-viewer">
+  <div :id="anchorId || checkpointId" class="t2s-ir-viewer" :class="{ 'quest-solved': questSolved }">
+    <div v-if="checkpointId" class="t2s-ir-quest-banner" :class="{ done: questSolved }">
+      <div class="ir-quest-top">
+        <span class="ir-quest-tag">🎯 CHECKPOINT 4 · 컴파일 파이프라인 탐정 미션</span>
+        <span class="ir-quest-state">{{ questSolved ? '✅ 탐정 미션 통과!' : '⏳ Stage 1~6 탭을 눌러 정답 단계를 찾아보세요' }}</span>
+      </div>
+      <p class="ir-quest-desc">
+        <strong>미션:</strong> 아래 <code>1 Python</code> ~ <code>6 SASS</code> 탭을 하나씩 클릭해 코드 변화를 비교해 보세요!
+        하드웨어 독립적이던 블록 텐서 타입 뒤에 <strong><code>#mma</code> / <code>#shared</code> 레이아웃 인코딩이 처음으로 붙고</strong>,
+        다중 버퍼 비동기 복사(<code>ttg.async_copy_global_to_local</code>)가 삽입되는 단계를 고른 뒤 하단 검증 버튼을 누르세요.
+      </p>
+    </div>
+
     <div class="t2s-ir-header">
       <div>
         <span class="t2s-ir-badge">🔍 COMPILER PIPELINE EXPLORER</span>
@@ -134,7 +186,7 @@ const activeIdx = ref(0)
         :key="s.id"
         class="ir-step-btn"
         :class="{ active: activeIdx === idx }"
-        @click="activeIdx = idx"
+        @click="selectStage(idx)"
       >
         <span class="step-num">{{ idx + 1 }}</span>
         <span class="step-label">{{ s.name }}</span>
@@ -164,6 +216,16 @@ const activeIdx = ref(0)
         </div>
       </div>
     </div>
+
+    <div v-if="checkpointId" class="t2s-ir-quest-footer">
+      <button type="button" class="ir-verify-btn" @click="verifyStageQuest">
+        🎯 현재 선택한 단계 ({{ stages[activeIdx].step }}: {{ stages[activeIdx].name }}) 검증하기
+      </button>
+      <div v-if="questFeedback" class="ir-quest-feedback" :class="questFeedback.ok ? 'ok' : 'retry'">
+        <strong>{{ questFeedback.ok ? '🎉 탐정 미션 클리어!' : '🔎 다른 단계를 살펴보세요' }}</strong>
+        <p>{{ questFeedback.msg }}</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -174,6 +236,102 @@ const activeIdx = ref(0)
   background: var(--vp-c-bg-soft);
   padding: 18px 20px;
   margin: 24px 0;
+}
+
+.t2s-ir-viewer.quest-solved {
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.t2s-ir-quest-banner {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.t2s-ir-quest-banner.done {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.ir-quest-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.ir-quest-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #d97706;
+}
+
+.dark .ir-quest-tag {
+  color: #fbbf24;
+}
+
+.t2s-ir-quest-banner.done .ir-quest-tag,
+.t2s-ir-quest-banner.done .ir-quest-state {
+  color: #10b981;
+}
+
+.ir-quest-state {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ir-quest-desc {
+  margin: 0 !important;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.t2s-ir-quest-footer {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--vp-c-divider);
+}
+
+.ir-verify-btn {
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: none;
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+}
+
+.ir-verify-btn:hover {
+  opacity: 0.94;
+}
+
+.ir-quest-feedback {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.ir-quest-feedback.ok {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.ir-quest-feedback.retry {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.ir-quest-feedback p {
+  margin: 4px 0 0 0 !important;
 }
 
 .t2s-ir-header {

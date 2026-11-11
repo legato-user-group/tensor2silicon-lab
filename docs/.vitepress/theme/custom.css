@@ -103,3 +103,21 @@ mjx-container[jax="CHTML"][display="true"] {
   font-size: 0.96rem;
   user-select: none;
 }
+
+/* Sidebar Mastery Progress Pill */
+.t2s-sidebar-mastery-pill {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  white-space: nowrap;
+}
+
+.t2s-sidebar-mastery-pill.done {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10b981;
+}
+

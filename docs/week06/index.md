@@ -1,13 +1,38 @@
 <WeekNavBar :week="6" topic="Python에서 Triton 커널로" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'Vector Add & Fused Softmax'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'RTX 4070 실측 & 벤치마크'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': 'Online Softmax & IR 분석'}, {'id': 'kiminjo', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '블록 포인터 & 마스킹 정밀 해부'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': 'Triton 프로그래밍 핵심 요약'}]" />
 
-### Python에서 Triton 커널로 — 블록 단위로 읽고 한 번에 계산하기
+# Python에서 Triton 커널로 — 블록 단위로 읽고 한 번에 계산하기
 
 > **6주차 핵심 질문**
 > Python으로 작성한 Triton 커널은 데이터를 어떻게 블록 단위로 처리하며, 여러 연산을 한 커널로 묶으면 왜 빨라질까?
 
 ---
 
-## 목차
+
+<TldrMapCard
+  :week="6"
+  intuition="CUDA가 개별 스레드(Thread) 단위로 인덱스를 짠다면, Triton은 1D/2D 블록(타일 벡터) 단위로 메모리를 읽고 온칩 SRAM 안에서 리덕션까지 한 번에 끝냅니다. Softmax 한 행 전체를 블록 하나에 담아 HBM 왕복을 8MN에서 2MN으로 1/4로 줄이는 것이 핵심입니다."
+  :steps="[
+    { tag: 'STEP 1 · 3~5절', title: '블록 인덱싱과 마스킹 기초', desc: 'program_id와 tl.arange로 포인터 블록을 만들고, 경계 밖 원소를 mask로 안전하게 처리하는 법을 익힙니다.' },
+    { tag: 'STEP 2 · 6~8절', title: 'Fused Softmax와 패딩(-inf) 원리', desc: '분리 실행(8MN) 대비 결합 커널(2MN)의 데이터 이동 절감량과 최댓값 리덕션을 위한 -inf 패딩 이유를 파헤칩니다.' },
+    { tag: 'STEP 3 · 9~11절', title: '정확도 검증과 실효 대역폭 측정', desc: 'torch.allclose 검증 기준과 워밍업·동기화를 갖춘 정확한 GPU 커널 벤치마크 방법을 확인합니다.' }
+  ]"
+  :keyQuestions="[
+    'Triton으로 직접 짠 Vector Add 커널은 왜 PyTorch 기본 x + y 연산보다 드라마틱하게 빨라지지 않을까?',
+    'Softmax 입력 행의 모든 원소가 음수일 때, 패딩 마스크 기본값(other)에 0.0을 넣으면 왜 계산 결과가 완전히 망가질까?',
+    '크기 [M, N] 행렬의 Softmax를 단일 Triton 커널로 결합하면 주요 HBM 데이터 이동량이 몇 배 줄어들까?'
+  ]"
+  :checkpoints="[
+    { id: 'cp1-check', shortLabel: 'Vector Add 한계 진단', anchorId: 'cp1-check' },
+    { id: 'cp2-predict', shortLabel: '패딩 버그 찾기', anchorId: 'cp2-predict' },
+    { id: 'cp3-calc', shortLabel: 'Softmax 이동량 계산', anchorId: 'cp3-calc' },
+    { id: 'cp4-quest', shortLabel: 'Triton 코드 매칭', anchorId: 'cp4-quest' },
+    { id: 'cp5-feynman', shortLabel: '파인만 한줄설명 & 인증', anchorId: 'cp5-feynman' }
+  ]"
+/>
+
+
+<details class="t2s-solution-toggle">
+<summary>📑 전체 절 목록 펼쳐보기 (우측 고정 목차에서도 바로 이동 가능)</summary>
 
 1. [이번 주에 알아야 할 큰 그림](#1-이번-주에-알아야-할-큰-그림)
 2. [공통 예제와 계산 조건](#2-공통-예제와-계산-조건)
@@ -25,6 +50,8 @@
 14. [해답과 해설](#14-해답과-해설)
 15. [스터디에서 설명하고 함께 점검하기](#15-스터디에서-설명하고-함께-점검하기)
 16. [읽을 자료와 검증 범위](#16-읽을-자료와-검증-범위)
+
+</details>
 
 ---
 
@@ -85,15 +112,6 @@
     <a class="t2s-synthesis-link" href="./researchers/jaehyeong">원문 노트 & 실측 분석 읽기 →</a>
   </div>
 </div>
-
----
-
-
-## 🔍 미리 보기: Triton 커널이 GPU 기계어가 되기까지
-
-> 6주차에서 작성한 Triton 블록 커널(`@triton.jit`)이 7주차에서 다루는 다단계 MLIR 파이프라인(`TTIR` → `TTGIR` → `LLVM IR` → `PTX` → `SASS`)을 거쳐 어떻게 변환되는지 단계별로 미리 살펴볼 수 있습니다.
-
-<IrPipelineViewer />
 
 ---
 
@@ -574,6 +592,28 @@ $$
 
 ---
 
+
+<MicroCheckpoint
+  :week="6"
+  checkpointId="cp1-check"
+  mode="choice"
+  badge="CHECKPOINT 1 · 3~5절 오개념 함정 진단 (O/X)"
+  title="Triton으로 직접 짠 Vector Add 커널은 PyTorch 기본 x + y보다 2배 이상 빠를까?"
+  question="Triton으로 첫 블록 커널인 add_kernel(Z = X + Y)을 완벽하게 작성했습니다. 충분히 큰 벡터(N = 10⁸)에서 PyTorch 기본 연산(x + y)과 실행 속도를 비교하면 어떤 결과가 나올까요?"
+  :options="[
+    {
+      label: 'Triton 커널이 저수준 포인터를 직접 제어하므로 PyTorch 기본 연산보다 2배 이상 빠르게 측정된다.',
+      correct: false,
+      feedback: '5절의 결론을 확인해 보세요! PyTorch 기본 x + y 역시 내부적으로 이미 잘 최적화된 컴파일된 GPU 커널을 호출합니다.'
+    },
+    {
+      label: '두 방식 모두 X 읽기(1N) + Y 읽기(1N) + Z 쓰기(1N) = 총 3N 원소를 HBM과 주고받는 최소 이동량에 이미 도달해 있어 속도가 거의 비슷하다.',
+      correct: true,
+      feedback: '정확합니다! 단일 연산(x + y)에는 제거할 중간 텐서가 없으므로 둘 다 똑같이 HBM 대역폭 한계선에서 실행됩니다. Triton의 진가는 여러 단계 연산이 이어지는 다음 6절의 Softmax에서 폭발합니다!'
+    }
+  ]"
+/>
+
 ## 6. 커널 결합과 HBM 왕복 — Softmax에서 차이가 커지는 이유
 
 > **학습 흐름 Step 3:** 이제 두 번째 공식 자료인 **[Tutorial 02: Fused Softmax](https://triton-lang.org/main/getting-started/tutorials/02-fused-softmax.html#motivations)**로 들어간다. 먼저 PyTorch 기본 연산 다섯 줄로 작성한 `naive_softmax` 코드를 보고, 각 줄이 실행될 때 HBM에서 데이터가 몇 번 왕복하는지 센 뒤, 이를 한 커널로 묶었을 때 `Q`와 산술 강도 `I`가 어떻게 바뀌는지 확인한다.
@@ -713,6 +753,28 @@ $$
 Tutorial 02가 서두에서 "이 튜토리얼의 결합 Softmax가 PyTorch보다 빠른 대상은 **각 행이 GPU의 SRAM에 들어가는 행렬**이다"라고 범위를 못 박은 이유가 바로 조건 ① 때문이다.
 
 ---
+
+
+<MicroCheckpoint
+  :week="6"
+  checkpointId="cp2-predict"
+  mode="choice"
+  badge="CHECKPOINT 2 · 7절 읽기 전 버그 예측 (Spot-the-Bug)"
+  title="7절을 읽기 전에 찾아보세요: 마스킹 패딩값에 other=0.0을 넣으면 왜 Softmax가 틀릴까요?"
+  question="길이 N = 5인 행 [-5.0, -2.0, -8.0, -3.0, -4.0]을 BLOCK_SIZE = 8 블록 하나에 읽으면서 row = tl.load(ptrs, mask=offs < N, other=0.0) 으로 작성한 뒤 곧바로 tl.max(row, axis=0) 와 tl.exp(row - row_max) 를 계산했습니다. 어떤 심각한 버그가 발생할까요?"
+  :options="[
+    {
+      label: '아무 문제 없다 — 0.0은 덧셈의 항등원이므로 Softmax 확률 결과에 영향을 주지 않는다.',
+      correct: false,
+      feedback: '0.0은 덧셈에서는 항등원이지만, 최댓값(max) 비교와 지수 함수(exp)에서는 절대 투명한 값이 아닙니다!'
+    },
+    {
+      label: '유효 원소가 모두 음수일 때 패딩된 0.0이 가짜 최댓값(row_max = 0.0)이 되어버리고, exp(0.0) = 1.0이 분모 합(sum)에 더해져 확률값이 완전히 왜곡된다.',
+      correct: true,
+      feedback: '정답입니다! 최댓값에 영향을 주지 않으면서 동시에 exp(other - max) = 0 이 되어 분모 합에서도 자동으로 0이 되게 하려면 반드시 other = -float(&quot;inf&quot;) 로 채워야 합니다. 바로 아래 7절에서 확인해 보세요!'
+    }
+  ]"
+/>
 
 ## 7. 행 단위 리덕션과 패딩값 — 한 행을 블록 하나에 담기
 
@@ -961,6 +1023,22 @@ def softmax(x):
 
 ---
 
+
+<MicroCheckpoint
+  :week="6"
+  checkpointId="cp3-calc"
+  mode="number"
+  badge="CHECKPOINT 3 · 6~8절 Fused Softmax 데이터 이동 감소 배수"
+  title="8MN에서 2MN으로! Triton Fused Softmax는 HBM 이동량을 몇 배 줄였을까?"
+  question="크기 [M, N] 행렬에 대해 PyTorch 기본 연산을 나열한 naive_softmax는 주요 큰 텐서 기준으로 읽기 5MN + 쓰기 3MN = 총 8MN개의 원소를 HBM과 주고받았습니다. 반면 한 행을 온칩 SRAM에 한 번만 읽어와(1MN) 최댓값·지수·합·나눗셈을 모두 마치고 최종 결과만 기록하는(1MN) Triton Fused Softmax는 총 2MN개만 이동합니다. 주요 HBM 원소 이동량은 몇 배(8MN ÷ 2MN) 줄어들었나요?"
+  :expectedAnswer="4"
+  :tolerance="0.01"
+  unit="배"
+  placeholder="정수 입력"
+  hint="분리 실행의 총 원소 이동량(8MN)을 Fused 커널의 총 원소 이동량(2MN)으로 나누어 보세요!"
+  solutionExplanation="정확합니다! 8MN ÷ 2MN = 4배 감소합니다(이동량 75% 절감). 대역폭 병목 연산인 Softmax에서 HBM 왕복을 1/4로 압축했기 때문에 RTX 4070 등 실제 GPU 실측에서도 수 배의 속도 향상이 그대로 나타납니다!"
+/>
+
 ## 8. 공동 활동 — 블록 인덱싱과 Fused Softmax의 데이터 이동 비교
 
 > **학습 흐름 Step 5 (첫 번째):** 3~7절에서 Tutorial 01과 Tutorial 02의 코드와 원리를 모두 살펴보았다. 이제 [6주차 안내]의 **4번 '함께 해볼 내용'**에 제시된 세 가지 손계산 과제를 차례대로 풀어 보며 앞에서 배운 내용을 내 손으로 직접 확인하고 정리한다. (이 절의 모든 수치는 11절의 Python 검산 코드로 다시 확인할 수 있다.)
@@ -1124,6 +1202,48 @@ $$
 | 결합 커널 (`softmax_kernel`) | 33.554 μs | **1,000.00 GB/s** | `1,000 GB/s` (`33.55 MB ÷ 33.554 μs`) |
 
 이상적 모델 안에서 `naive_softmax`도 매 순간 HBM 대역폭 `1,000 GB/s`를 100% 꽉 채워 쓰고 있다. 단지 불필요한 중간 텐서를 네 번이나 더 읽고 쓰느라 총 이동량이 4배(`134.28 MB`)로 불어났고, 그 때문에 시간이 4배 걸려 **튜토리얼식 유효 대역폭이 약 4분의 1(`249.88 GB/s`)로 찍히는 것**이다. 따라서 "`naive_softmax`의 유효 대역폭이 낮으니 HBM이 놀고 있다"고 해석하면 안 된다.
+
+---
+
+
+## 🧩 실습 검증: Triton 블록 커널 핵심 구문 매칭 미션 (Checkpoint 4)
+
+<ConceptMatchQuest
+  :week="6"
+  checkpointId="cp4-quest"
+  badge="CHECKPOINT 4 · Triton 핵심 API & 동작 매칭 미션"
+  title="Fused Softmax 커널을 구성하는 4가지 Triton 구문과 역할을 연결해 보세요!"
+  instruction="왼쪽의 Triton 코드 조각을 먼저 클릭한 뒤, 오른쪽에서 그 코드가 담당하는 정확한 실행 의미를 골라 4쌍을 완성하세요."
+  :pairs="[
+    {
+      id: 'pid',
+      left: 'row_idx = tl.program_id(0)',
+      right: '현재 실행 중인 커널 프로그램 인스턴스가 행렬의 몇 번째 행(Row)을 맡았는지 식별'
+    },
+    {
+      id: 'arange',
+      left: 'col_offsets = tl.arange(0, BLOCK_SIZE)',
+      right: '단일 스칼라 인덱스가 아니라 한 행 안의 열 오프셋 벡터 [0, 1, ..., BLOCK_SIZE-1]을 한 번에 생성'
+    },
+    {
+      id: 'mask',
+      left: 'tl.load(ptrs, mask=col_offsets < N, other=-float(&quot;inf&quot;))',
+      right: '열 길이 N을 넘는 패딩 구간을 메모리 오류 없이 막고, max/exp 리덕션 결과를 오염시키지 않게 처리'
+    },
+    {
+      id: 'reduce',
+      left: 'tl.max(row, axis=0) & tl.sum(num, axis=0)',
+      right: 'HBM에 중간 결과를 내리지 않고 온칩 메모리(레지스터/SRAM) 안에서 행 단위 최댓값과 분모 합을 즉시 축약'
+    }
+  ]"
+/>
+
+<details class="t2s-solution-toggle">
+<summary>🔍 미리 보기: 방금 작성한 Triton 커널이 7주차에서 GPU 기계어(PTX/SASS)로 컴파일되는 과정 펼쳐보기</summary>
+
+<IrPipelineViewer />
+
+</details>
 
 ---
 
@@ -1874,6 +1994,24 @@ $$
 ---
 
 </details>
+
+
+## 🏅 Week 06 완독 점검 & 인증 패스포트 (Checkpoint 5)
+
+<FeynmanPassport
+  :week="6"
+  weekTitle="Python에서 Triton 커널로 — 블록 프로그래밍과 Fused Softmax"
+  checkpointId="cp5-feynman"
+  :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
+  promptQuestion="질문: Triton으로 Vector Add를 작성하면 PyTorch 기본 연산과 속도가 거의 비슷하지만, Softmax를 Triton 단일 커널로 작성하면 수 배 빨라지는 이유를 '온칩 메모리'와 'HBM 왕복' 관점에서 설명해 보세요."
+  modelAnswer="Vector Add는 입력 두 개를 읽고 결과 하나를 쓰는 단일 연산이라 원래부터 중간 텐서의 HBM 왕복이 없어 더 줄일 데이터 이동이 없습니다. 반면 분리된 Softmax는 최댓값 빼기, exp, 합산, 나눗셈마다 중간 텐서를 HBM에 반복해서 썼다 읽지만(약 8MN), Triton Fused Softmax는 한 행을 온칩 SRAM/레지스터에 한 번만 읽어와 모든 단계를 끝내고 최종 결과만 HBM에 기록(2MN)하므로 HBM 이동량이 1/4로 줄어들어 크게 빨라집니다."
+  :selfCheckItems="[
+    'Vector Add와의 차이 언급: 단일 연산은 제거할 중간 텐서가 없지만 다단계 연산(Softmax)은 중간 HBM 왕복이 많다는 점을 대조했다.',
+    '온칩 재사용 효과 언급: 한 행을 온칩 메모리(SRAM/레지스터)에 유지한 채 리덕션과 원소별 연산을 한 번에 끝내 HBM 읽기/쓰기를 줄인 점을 설명했다.'
+  ]"
+/>
+
+---
 
 ## 15. 스터디에서 설명하고 함께 점검하기
 

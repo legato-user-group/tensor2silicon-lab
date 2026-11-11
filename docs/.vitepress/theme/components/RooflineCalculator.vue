@@ -1,5 +1,19 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useMasteryStore } from '../composables/useMasteryStore'
+
+const props = defineProps<{
+  week?: number
+  checkpointId?: string
+  anchorId?: string
+  questType?: 'week03' | 'week04'
+}>()
+
+const { isCompleted, markCompleted } = useMasteryStore()
+const questFeedback = ref<{ ok: boolean; msg: string } | null>(null)
+const questSolved = computed(() =>
+  props.week && props.checkpointId ? isCompleted(props.week, props.checkpointId) : false
+)
 
 interface HwPreset {
   id: string
@@ -13,7 +27,7 @@ interface HwPreset {
 const presets: HwPreset[] = [
   {
     id: 'edu_fp32',
-    name: '🎓 4주차 가상 교육용 GPU (FP32: 20 TFLOPs, 1.0 TB/s)',
+    name: '🎓 3·4주차 가상 교육용 GPU (FP32: 20 TFLOPs, 1.0 TB/s)',
     peakTflops: 20,
     bwTbs: 1.0,
     sramLimitKb: 164,
@@ -190,10 +204,98 @@ function formatBytes(bytes: number) {
   if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB (' + (bytes / Math.pow(1024, 2)).toFixed(1) + ' MiB)'
   return (bytes / 1024).toFixed(1) + ' KB'
 }
+
+function verifyQuest() {
+  if (props.questType === 'week03') {
+    if (selectedPresetId.value !== 'edu_fp32') {
+      questFeedback.value = {
+        ok: false,
+        msg: '먼저 상단 드롭다운에서 「🎓 3·4주차 가상 교육용 GPU (FP32: 20 TFLOPs, 1.0 TB/s)」 프리셋을 선택해 주세요!'
+      }
+      return
+    }
+    if (elemBytes.value !== 4) {
+      questFeedback.value = {
+        ok: false,
+        msg: '입력/출력 자료형을 「FP32 (4 Byte)」로 유지한 상태에서 타일 크기에 따른 병목 전환을 확인해 보세요!'
+      }
+      return
+    }
+    if (!isComputeBound.value) {
+      questFeedback.value = {
+        ok: false,
+        msg: `현재 ${tileBM.value}×${tileBN.value} 타일에서는 산술 강도(I = ${arithmeticIntensity.value.toFixed(1)} FLOPs/B)가 분기점(I* = 20.0)보다 낮아 🚧 메모리 대역폭 병목(Memory-Bound) 상태입니다. 출력 타일을 한 단계 더 키워 보세요!`
+      }
+      return
+    }
+    if (tileBM.value > 128 || tileBN.value > 128) {
+      questFeedback.value = {
+        ok: false,
+        msg: `⚡ 256×256도 연산 병목 구간에 들어가지만, 미션 조건은 메모리 병목을 벗어나 연산 병목(I ≥ 20)에 '처음으로' 진입하는 최소 정사각 출력 타일을 찾는 것입니다! 한 단계 줄여서 확인해 보세요.`
+      }
+      return
+    }
+
+    questFeedback.value = {
+      ok: true,
+      msg: `정답입니다! 64×64 타일까지는 메모리 이동 시간(Q/BW)이 더 길어 대역폭 병목(I = 15.9 < 20)에 머물지만, 128×128 타일(I = ${arithmeticIntensity.value.toFixed(1)} ≥ 20)부터는 데이터 재사용 덕분에 ⚡ 연산 병목 구간(Compute-Bound)으로 전환됩니다!`
+    }
+    if (props.week && props.checkpointId) {
+      markCompleted(props.week, props.checkpointId)
+    }
+    return
+  }
+
+  if (selectedPresetId.value !== 'edu_fp16') {
+    questFeedback.value = {
+      ok: false,
+      msg: '먼저 상단 드롭다운에서 「🎓 7주차 가상 교육용 GPU (FP16: 120 TFLOPs, 1.5 TB/s)」 프리셋을 선택해 주세요!'
+    }
+    return
+  }
+  if (!isComputeBound.value) {
+    questFeedback.value = {
+      ok: false,
+      msg: `아직 산술 강도(I = ${arithmeticIntensity.value.toFixed(1)} FLOPs/B)가 하드웨어 분기점(I* = ${ridgePoint.value.toFixed(1)} FLOPs/B)보다 낮아 대역폭 병목 상태입니다. 출력 타일 크기(BM×BN)를 더 키워 데이터 재사용을 늘려보세요!`
+    }
+    return
+  }
+  if (fullStagesSmemKb.value > currentHw.value.sramLimitKb) {
+    questFeedback.value = {
+      ok: false,
+      msg: `⚡ 연산 병목 구간 진입에는 성공했지만, 전체 ${numStages.value}단계 Shared Memory 요구량(${fullStagesSmemKb.value.toFixed(1)} KB)이 SM 한도(${currentHw.value.sramLimitKb} KB)를 초과했습니다! 11절의 원리(출력 타일은 유지하면서 BK 폭이나 파이프라인 단계를 조절)를 적용해 보세요!`
+    }
+    return
+  }
+
+  questFeedback.value = {
+    ok: true,
+    msg: `완벽합니다! 출력 타일(${tileBM.value}×${tileBN.value})로 산술 강도 I = ${arithmeticIntensity.value.toFixed(1)} FLOPs/B ≥ 80(연산 병목 도달)을 확보하면서, BK=${tileBK.value}·${numStages.value}stg 조절로 Shared Memory(${fullStagesSmemKb.value.toFixed(1)} KB ≤ 96 KB) 한도까지 동시에 만족시켰습니다!`
+  }
+  if (props.week && props.checkpointId) {
+    markCompleted(props.week, props.checkpointId)
+  }
+}
 </script>
 
 <template>
-  <div class="t2s-calc-box">
+  <div :id="anchorId || checkpointId" class="t2s-calc-box" :class="{ 'quest-solved': questSolved }">
+    <div v-if="checkpointId" class="t2s-quest-banner" :class="{ done: questSolved }">
+      <div class="quest-top">
+        <span class="quest-tag">🎯 CHECKPOINT 4 · 시뮬레이터 실습 미션</span>
+        <span class="quest-state">{{ questSolved ? '✅ 실습 미션 통과!' : '⏳ 직접 조작해 통과해 보세요' }}</span>
+      </div>
+      <p v-if="questType === 'week03'" class="quest-desc">
+        <strong>미션 조건:</strong> 기본 프리셋 <code>🎓 3·4주차 가상 교육용 GPU (FP32: 20 TFLOPs, 1.0 TB/s)</code>와 <code>FP32 (4 Byte)</code> 상태에서,
+        <code>🚧 메모리 대역폭 병목</code>을 벗어나 <strong><code>⚡ 연산 병목 구간 (Compute-Bound, I ≥ 20)</code>에 처음으로 진입하는 최소 정사각 출력 타일(<code>BM × BN</code>)</strong>을 찾아 선택한 뒤 아래 검증 버튼을 누르세요!
+      </p>
+      <p v-else class="quest-desc">
+        <strong>미션 조건:</strong> 하드웨어 프리셋을 <code>🎓 7주차 가상 교육용 GPU (FP16: 120 TFLOPs, 1.5 TB/s, SM 한도 96KB)</code>로 선택한 뒤,
+        <strong>① 연산 병목 구간(Compute-Bound, I ≥ 80)에 도달</strong>하면서 동시에
+        <strong>② 전체 파이프라인 Shared Memory가 96 KB 이하(경고 없음)</strong>가 되도록 타일 조합(<code>BM×BN</code>, <code>BK</code>, <code>stg</code>)을 맞추고 아래 검증 버튼을 누르세요!
+      </p>
+    </div>
+
     <div class="t2s-calc-header">
       <div>
         <span class="t2s-calc-badge">🎛️ INTERACTIVE SIMULATOR</span>
@@ -323,8 +425,8 @@ function formatBytes(bytes: number) {
           stroke-width="2"
         />
         <text
-          :x="Math.min(svgW - 95, Math.max(padL + 60, currentPointPx.x))"
-          :y="Math.max(padT + 22, currentPointPx.y - 12)"
+          :x="Math.min(svgW - 105, Math.max(padL + 70, currentPointPx.x))"
+          :y="isComputeBound ? currentPointPx.y + 20 : Math.max(padT + 22, currentPointPx.y - 12)"
           text-anchor="middle"
           font-size="11"
           font-weight="bold"
@@ -365,7 +467,7 @@ function formatBytes(bytes: number) {
         <span class="m-label">Roofline 성능 상한 R = min(P, BW×I)</span>
         <strong class="m-val highlight">{{ rooflinePerf.toFixed(1) }} TFLOPs/s</strong>
         <span class="m-sub">
-          피크 연산 성능({{ currentHw.value?.peakTflops || currentHw.peakTflops }} TFLOPs/s)의
+          피크 연산 성능({{ currentHw.peakTflops }} TFLOPs/s)의
           <strong>{{ ((rooflinePerf / currentHw.peakTflops) * 100).toFixed(0) }}%</strong> 도달
         </span>
       </div>
@@ -396,6 +498,16 @@ function formatBytes(bytes: number) {
         </div>
       </div>
     </div>
+
+    <div v-if="checkpointId" class="t2s-quest-footer">
+      <button type="button" class="quest-verify-btn" @click="verifyQuest">
+        🎯 현재 설정으로 실습 미션 검증하기
+      </button>
+      <div v-if="questFeedback" class="quest-feedback" :class="questFeedback.ok ? 'ok' : 'retry'">
+        <strong>{{ questFeedback.ok ? '🎉 미션 클리어!' : '🔧 조정이 필요합니다' }}</strong>
+        <p>{{ questFeedback.msg }}</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -407,6 +519,102 @@ function formatBytes(bytes: number) {
   padding: 18px 20px;
   margin: 24px 0;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.t2s-calc-box.quest-solved {
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.t2s-quest-banner {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.t2s-quest-banner.done {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.quest-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.quest-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #d97706;
+}
+
+.dark .quest-tag {
+  color: #fbbf24;
+}
+
+.t2s-quest-banner.done .quest-tag,
+.t2s-quest-banner.done .quest-state {
+  color: #10b981;
+}
+
+.quest-state {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.quest-desc {
+  margin: 0 !important;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.t2s-quest-footer {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--vp-c-divider);
+}
+
+.quest-verify-btn {
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: none;
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+}
+
+.quest-verify-btn:hover {
+  opacity: 0.94;
+}
+
+.quest-feedback {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.quest-feedback.ok {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.quest-feedback.retry {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.quest-feedback p {
+  margin: 4px 0 0 0 !important;
 }
 
 .t2s-calc-header {

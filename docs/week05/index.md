@@ -1,6 +1,6 @@
 <WeekNavBar :week="5" topic="xPU를 어떻게 비교할 것인가" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'GPU vs TPU vs NPU 비교표'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'xPU 비교 기준 & 손계산'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '아키텍처 심층 리서치'}]" />
 
-### xPU를 어떻게 비교할 것인가 — 사양표에서 실제 실행 조건까지
+# xPU를 어떻게 비교할 것인가 — 사양표에서 실제 실행 조건까지
 
 > **5주차 핵심 질문**
 > 같은 AI 작업에 쓸 가속기를 비교하려면 어떤 조건부터 맞춰야 할까?
@@ -9,7 +9,32 @@
 
 ---
 
-## 목차
+
+<TldrMapCard
+  :week="5"
+  intuition="가속기(GPU·TPU·NPU/LPU) 사양표에서 가장 큰 TFLOPs 숫자 하나만 비교하면 반드시 틀립니다. 자료형·희소성(Sparsity) 조건을 맞춘 실효 연산 성능(P)과 메모리 대역폭(BW), 그리고 워크로드의 산술 강도(Prefill vs Decode)를 함께 놓아야 어떤 칩이 실제로 빠른지 판별할 수 있습니다."
+  :steps="[
+    { tag: 'STEP 1 · 3~5절', title: '아키텍처와 사양표 조건 해독', desc: 'GPU(SIMT)·TPU(Systolic)·NPU의 구조 차이와 사양표 숫자 뒤에 숨은 정밀도·희소성 전제 조건을 해독합니다.' },
+    { tag: 'STEP 2 · 6~8절', title: '장치 A vs B 역전 현상 손계산', desc: '피크 연산이 2배 낮은 장치가 대역폭 병목 작업에서 오히려 2배 빨라지는 조건과 호스트 전송 오버헤드를 계산합니다.' },
+    { tag: 'STEP 3 · 9~11절', title: 'LLM 지표(TTFT·TPOT)와 실전 비교', desc: 'Prefill(연산 집약)과 Decode(대역폭 집약) 단계별로 어떤 하드웨어 스펙이 결정적인지 연결합니다.' }
+  ]"
+  :keyQuestions="[
+    '사양표의 「INT8 2:4 Sparsity 기준 TOPS」 숫자를 일반적인 FP16 조밀(Dense) 행렬곱 시간 계산에 그대로 쓰면 왜 4배나 틀릴까?',
+    '피크 연산 성능이 100 TFLOPs/s인 장치 B가 200 TFLOPs/s인 장치 A보다 2배 빠르게 끝나는 작업은 어떤 특징을 가질까?',
+    'LLM 서비스에서 첫 토큰 지연(TTFT)과 토큰당 생성 시간(TPOT)은 각각 하드웨어의 어느 능력에 좌우될까?'
+  ]"
+  :checkpoints="[
+    { id: 'cp1-check', shortLabel: '사양표 함정 O/X', anchorId: 'cp1-check' },
+    { id: 'cp2-predict', shortLabel: '장치 승자 예측', anchorId: 'cp2-predict' },
+    { id: 'cp3-calc', shortLabel: '실행 시간 손계산', anchorId: 'cp3-calc' },
+    { id: 'cp4-quest', shortLabel: 'xPU·워크로드 매칭', anchorId: 'cp4-quest' },
+    { id: 'cp5-feynman', shortLabel: '파인만 한줄설명 & 인증', anchorId: 'cp5-feynman' }
+  ]"
+/>
+
+
+<details class="t2s-solution-toggle">
+<summary>📑 전체 절 목록 펼쳐보기 (우측 고정 목차에서도 바로 이동 가능)</summary>
 
 1. [이번 주에 알아야 할 큰 그림](#1-이번-주에-알아야-할-큰-그림)
 2. [공통 예제의 수학과 비교 조건](#2-공통-예제의-수학과-비교-조건)
@@ -27,6 +52,8 @@
 14. [해답과 해설](#14-해답과-해설)
 15. [스터디에서 설명하고 함께 점검하기](#15-스터디에서-설명하고-함께-점검하기)
 16. [읽을 자료와 검증 범위](#16-읽을-자료와-검증-범위)
+
+</details>
 
 ---
 
@@ -306,6 +333,28 @@ $$
 
 ---
 
+
+<MicroCheckpoint
+  :week="5"
+  checkpointId="cp1-check"
+  mode="choice"
+  badge="CHECKPOINT 1 · 3~4절 사양표 함정 진단 (O/X)"
+  title="브로셔의 제일 큰 숫자(Sparsity 포함 TOPS)로 내 FP16 모델 시간을 계산해도 될까?"
+  question="어떤 신형 가속기 홍보 자료에 「최대 성능 4,000 TOPS (INT8, 2:4 구조적 희소성 적용 기준)」이라고 적혀 있습니다. 내가 실행할 모델이 일반적인 조밀(Dense) FP16 행렬곱일 때, T_compute = F / P 식의 분모 P에 4,000을 그대로 대입해도 될까요?"
+  :options="[
+    {
+      label: '⭕ 된다 — 같은 칩의 최대 연산 능력을 나타내는 대표 수치이므로 그대로 대입해 상한을 구한다.',
+      correct: false,
+      feedback: '4절의 핵심 경고를 확인해 보세요! 자료형(INT8 vs FP16)에서 보통 2배, 2:4 희소성(Sparsity) 조건에서 또 2배가 부풀려져 최대 4배나 과대평가하게 됩니다.'
+    },
+    {
+      label: '❌ 안 된다 — 반드시 내가 실행할 작업과 동일한 자료형(FP16) 및 조밀(Dense) 조건의 실효 피크 연산 성능(P)을 찾아 대입해야 한다.',
+      correct: true,
+      feedback: '정확합니다! 사양표 숫자는 항상 「어떤 자료형인가, 희소성(Sparsity) 가정인가, 부스트 클록 기준인가」라는 조건표와 한 몸으로 읽어야 공정한 비교가 가능합니다.'
+    }
+  ]"
+/>
+
 ## 5. 소프트웨어와 실행 경로 — 같은 모델이 가속기까지 내려가는 과정
 
 ### 5.1 세 가속기의 대표적인 실행 경로
@@ -439,6 +488,33 @@ flowchart TB
 
 ---
 
+
+<MicroCheckpoint
+  :week="5"
+  checkpointId="cp2-predict"
+  mode="choice"
+  badge="CHECKPOINT 2 · 7절 읽기 전 승자 예측 (Predict-Before-Read)"
+  title="7절을 읽기 전에 예측해 보세요: 피크 연산 성능이 절반인 장치 B가 장치 A를 이길 수 있을까요?"
+  question="장치 A(P = 200 TFLOPs/s, BW = 1 TB/s)와 장치 B(P = 100 TFLOPs/s, BW = 2 TB/s)가 있습니다. 산술 강도가 낮은 작업 1(F = 10¹² FLOPs, Q = 100 GB, 즉 I = 10 FLOP/Byte)을 두 장치에서 실행하면 어느 쪽이 얼마나 더 빠를까요?"
+  :options="[
+    {
+      label: '피크 연산 성능이 2배 높은 장치 A가 2배 더 빠르다.',
+      correct: false,
+      feedback: '장치 A의 분기점은 I* = 200 / 1 = 200이고, 작업 1의 산술 강도는 I = 10입니다! 연산기가 아니라 메모리 대역폭이 발목을 잡고 있습니다.'
+    },
+    {
+      label: '연산 성능은 절반이지만 메모리 대역폭이 2배 넓은 장치 B가 오히려 2배 더 빠르다 (50 ms vs 100 ms).',
+      correct: true,
+      feedback: '정답입니다! I = 10인 작업은 두 장치 모두에서 대역폭 병목이므로 T_memory = Q / BW가 시간을 결정합니다. 따라서 BW가 2 TB/s인 장치 B(50 ms)가 장치 A(100 ms)를 2배 차이로 이깁니다!'
+    },
+    {
+      label: 'P × BW 곱이 서로 같으므로 두 장치의 실행 시간은 완전히 동일하다.',
+      correct: false,
+      feedback: '실행 시간은 P × BW가 아니라 max(F/P, Q/BW)로 결정됩니다! 아래 7절 계산표에서 직접 확인해 보세요.'
+    }
+  ]"
+/>
+
 ## 7. 계산 예제 1 — 연산 성능이 더 큰 장치가 항상 빠를까
 
 ### 7.1 가상 장치 A·B와 두 작업의 조건
@@ -549,6 +625,22 @@ flowchart LR
 
 ---
 
+
+<MicroCheckpoint
+  :week="5"
+  checkpointId="cp3-calc"
+  mode="number"
+  badge="CHECKPOINT 3 · 7절 작업 2(연산 집약) 실행 시간 검증"
+  title="작업의 산술 강도가 I = 1000으로 바뀌면 장치 B의 실행 시간은 몇 ms가 될까?"
+  question="위 7절의 장치 B(P = 100 TFLOPs/s = 10¹⁴ FLOPs/s, BW = 2 TB/s)에서 이번에는 데이터 이동량은 똑같이 Q = 100 GB이지만 연산량이 100배 많은 작업 2(F = 10¹⁴ FLOPs, I = 1000 FLOP/Byte)를 실행합니다. 메모리 시간은 T_memory = 50 ms이지만 이제는 연산 시간(T_compute = F / P)이 병목이 됩니다. 장치 B의 이상적 실행 시간 T_ideal = max(T_compute, T_memory)은 몇 ms일까요?"
+  :expectedAnswer="1000"
+  :tolerance="1"
+  unit="ms"
+  placeholder="정수 입력 (단위: ms)"
+  hint="T_compute = 10¹⁴ FLOPs ÷ (100 × 10¹² FLOPs/s) = 1.0 초(s)입니다. 1.0 초를 밀리초(ms)로 변환해 보세요!"
+  solutionExplanation="정확합니다! T_compute = 1.0 s = 1000 ms이고 T_memory = 50 ms이므로 max(1000, 50) = 1000 ms가 됩니다(반면 P=200인 장치 A는 500 ms 만에 끝납니다!). 즉, 어느 가속기가 더 빠른지는 고정된 서열이 아니라 작업의 산술 강도(I)에 따라 정반대로 뒤집힙니다."
+/>
+
 ## 8. 계산 예제 2 — 장치 연산이 빠르면 전체 응답도 빠를까
 
 ### 8.1 가상 실행 경로 가·나의 측정 구간 분해
@@ -646,6 +738,41 @@ $$
 여기서 두 번째 등식(`평균 전력 / 유효 처리량`)은 **전력과 처리량을 동일한 작업 부하와 동일한 시간 구간에서 함께 측정했을 때** 성립한다.
 - 시간당 대여 요금(`$/hour`)이 절반인 장치라도, 같은 품질·지연 조건에서 시간당 처리하는 작업 수가 4분의 1이라면 **작업당 비용은 오히려 2배 비싸진다.** 또한 클라우드 요금은 리전, 약정 여부, 호스트 CPU·메모리 포함 범위, 확인 날짜에 따라 달라지므로 반드시 조사 시점과 구성을 함께 남긴다.
 - 사양표에 적힌 최대 설계 전력(**TDP**)은 장치가 특정 작업에서 실제로 소비하는 **평균 전력(W)**과 다르며 시스템 전체의 벽면 전력(wall power)과 칩 단독 전력도 범위가 다르다. 순간 소비 전력(W)이 낮더라도 처리 속도가 훨씬 느리면 작업 하나를 끝내는 데 드는 에너지(`J/request`)는 더 커질 수 있다(연습문제 3에서 직접 계산한다).
+
+---
+
+
+## 🧩 실습 검증: xPU 아키텍처 & LLM 워크로드 매칭 미션 (Checkpoint 4)
+
+<ConceptMatchQuest
+  :week="5"
+  checkpointId="cp4-quest"
+  badge="CHECKPOINT 4 · xPU 구조 & LLM 지표 연결 미션"
+  title="가속기 아키텍처와 LLM 추론 단계별 병목 특성을 바르게 연결해 보세요!"
+  instruction="왼쪽의 하드웨어/워크로드 항목을 클릭한 뒤, 오른쪽에서 가장 알맞은 구조적·성능적 특징을 선택해 4쌍을 모두 연결하세요."
+  :pairs="[
+    {
+      id: 'gpu',
+      left: 'GPU (SIMT + Tensor Core)',
+      right: '수많은 워프(스레드 묶음) 스케줄링과 캐시/Shared Memory로 불규칙 분기와 범용 병렬성을 유연하게 처리'
+    },
+    {
+      id: 'tpu',
+      left: 'TPU (Systolic Array + VMEM)',
+      right: '거대한 2D 맥동 배열(MXU)과 컴파일러가 직접 관리하는 대용량 스크래치패드(VMEM)로 정형 행렬 연산 극대화'
+    },
+    {
+      id: 'prefill',
+      left: 'LLM Prefill 단계 (TTFT 결정)',
+      right: '긴 입력 프롬프트를 한꺼번에 행렬곱으로 처리해 산술 강도(I)가 높고 연산 성능(TFLOPs/s)이 핵심인 구간'
+    },
+    {
+      id: 'decode',
+      left: 'LLM Decode 단계 (TPOT 결정)',
+      right: '토큰을 1개씩 생성할 때마다 거대한 가중치와 KV 캐시를 읽어야 해 메모리 대역폭(TB/s)에 묶이는 구간'
+    }
+  ]"
+/>
 
 ---
 
@@ -981,6 +1108,24 @@ flowchart TB
 ---
 
 </details>
+
+
+## 🏅 Week 05 완독 점검 & 인증 패스포트 (Checkpoint 5)
+
+<FeynmanPassport
+  :week="5"
+  weekTitle="xPU를 어떻게 비교할 것인가 — 아키텍처·사양표·워크로드 비교 기준"
+  checkpointId="cp5-feynman"
+  :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
+  promptQuestion="질문: 피크 연산 성능(TFLOPs/s)은 더 낮지만 메모리 대역폭(TB/s)이 넓은 가속기가 LLM 추론의 Decode(토큰 순차 생성) 단계에서 오히려 더 빠른 토큰 생성 속도(TPOT)를 내는 이유를 설명해 보세요."
+  modelAnswer="LLM의 Decode 단계는 한 번에 토큰 1개(또는 작은 배치)를 생성하기 위해 모델 전체 가중치와 KV 캐시를 메모리에서 읽어와야 하므로 데이터 이동량 대비 연산량인 산술 강도(I)가 매우 낮습니다. 따라서 하드웨어 분기점 왼쪽의 메모리 대역폭 병목 구간에 놓이게 되며, 피크 연산 성능(P)보다 초당 데이터를 실어 나르는 메모리 대역폭(BW)이 큰 장치가 더 짧은 TPOT를 달성합니다."
+  :selfCheckItems="[
+    'Decode 단계의 낮은 산술 강도 언급: 토큰당 읽어야 할 가중치·KV 캐시 크기에 비해 연산량이 적어 Memory-Bound 구간임을 설명했다.',
+    '대역폭(BW) 지배 원리 언급: 대역폭 병목에서는 피크 TFLOPs(P)보다 메모리 대역폭(Q/BW)이 토큰당 지연 시간(TPOT)을 좌우함을 짚었다.'
+  ]"
+/>
+
+---
 
 ## 15. 스터디에서 설명하고 함께 점검하기
 
