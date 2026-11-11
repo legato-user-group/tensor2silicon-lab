@@ -1,6 +1,20 @@
 <WeekNavBar :week="4" topic="Roofline과 Tiling" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송무복)', 'badge': 'Roofline & 타일 크기별 분석'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': '4×4 & 4096×4096 완전 해설'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '2D Block Tiling 직관'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '이론 유도 & 연습문제 풀이'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': 'Roofline & Tiling 핵심 노트'}]" />
 
 
+<div class="t2s-author-byline">
+  <div class="t2s-author-byline-main">
+    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />
+    <div class="t2s-author-meta">
+      <div class="t2s-author-title-row">
+        <span>🧭 <strong>주차 학습 안내 &amp; 손계산 예제 집필: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>
+        <span class="t2s-author-role-badge">Lead Author</span>
+      </div>
+      <div class="t2s-author-affil">T2S Lab 랩장 · 전 주차 커리큘럼 및 정량 계산 연습문제·해설 설계</div>
+    </div>
+  </div>
+  <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
+</div>
+
 **[4주차 안내] Roofline과 Tiling**
 
 안녕하세요! 4주차에는 **커널의 성능 한계를 Roofline 그래프로 읽고, Tiling으로 데이터를 재사용하는 방법**을 함께 살펴보려고 합니다.

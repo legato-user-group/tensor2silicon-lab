@@ -1,6 +1,20 @@
 <WeekNavBar :week="2" topic="모델에서 실리콘까지" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송무복)', 'badge': 'PyTorch·XLA·MAX 2부작'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': '다이어그램 & 스택 해부'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '실행 스택 핵심 요약'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '인터랙티브 HTML & 슬라이드'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': '컴파일 파이프라인 정리'}]" />
 
 
+<div class="t2s-author-byline">
+  <div class="t2s-author-byline-main">
+    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />
+    <div class="t2s-author-meta">
+      <div class="t2s-author-title-row">
+        <span>🧭 <strong>주차 학습 안내 &amp; 손계산 예제 집필: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>
+        <span class="t2s-author-role-badge">Lead Author</span>
+      </div>
+      <div class="t2s-author-affil">T2S Lab 랩장 · 전 주차 커리큘럼 및 정량 계산 연습문제·해설 설계</div>
+    </div>
+  </div>
+  <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
+</div>
+
 **[2주차 안내] 모델에서 실리콘까지**
 
 안녕하세요! 2주차에는 **AI 모델이 실제 가속기에서 실행되기까지 어떤 과정을 거치는지** 각자 정리하고 함께 이야기해보려고 합니다.

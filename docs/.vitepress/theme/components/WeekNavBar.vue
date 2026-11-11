@@ -27,8 +27,20 @@ function isActive(targetPath: string) {
 <template>
   <div class="t2s-week-nav">
     <div class="t2s-week-nav-header">
-      <span class="t2s-week-badge">WEEK 0{{ week }}</span>
-      <span class="t2s-week-topic">{{ topic }}</span>
+      <div class="t2s-week-nav-left">
+        <span class="t2s-week-badge">WEEK 0{{ week }}</span>
+        <span class="t2s-week-topic">{{ topic }}</span>
+      </div>
+      <a
+        href="https://github.com/yblee110"
+        target="_blank"
+        rel="noopener"
+        class="t2s-lead-author-chip"
+        title="메인 교안 집필 및 커리큘럼 설계: 이영빈 (@yblee110)"
+      >
+        <img src="https://github.com/yblee110.png" alt="이영빈" class="author-chip-avatar" />
+        <span>✍️ 메인 교안 집필: <strong>이영빈 (yblee)</strong></span>
+      </a>
     </div>
     <div class="t2s-week-nav-tabs">
       <div class="t2s-tab-group main-tabs">
@@ -37,14 +49,16 @@ function isActive(targetPath: string) {
           class="t2s-tab"
           :class="{ active: isActive(`${weekPrefix}/`) || isActive(`${weekPrefix}/index`) }"
         >
-          📘 메인 교안 (통합본)
+          <span>📘 메인 교안</span>
+          <span class="pill-sub">집필: 이영빈</span>
         </a>
         <a
           :href="withBase(`${weekPrefix}/guide`)"
           class="t2s-tab"
           :class="{ active: isActive(`${weekPrefix}/guide`) }"
         >
-          🧭 학습 안내 & 계산 예제
+          <span>🧭 학습 안내 & 예제</span>
+          <span class="pill-sub">yblee</span>
         </a>
       </div>
       <div class="t2s-tab-divider"></div>
@@ -71,17 +85,55 @@ function isActive(targetPath: string) {
   border: 1px solid var(--vp-c-divider);
   border-radius: 12px;
   padding: 14px 16px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .t2s-week-nav-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 12px;
   padding-bottom: 10px;
   border-bottom: 1px dashed var(--vp-c-divider);
+}
+
+.t2s-week-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.t2s-lead-author-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 5px;
+  border-radius: 999px;
+  background: var(--vp-c-bg);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  font-size: 0.76rem;
+  color: var(--vp-c-text-2);
+  text-decoration: none !important;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.t2s-lead-author-chip strong {
+  color: var(--vp-c-brand-1);
+}
+
+.t2s-lead-author-chip:hover {
+  border-color: var(--vp-c-brand-1);
+}
+
+.author-chip-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .t2s-week-badge {

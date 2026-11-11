@@ -212,7 +212,7 @@ async function copyCertification() {
             “{{ userAnswer.trim() }}”
           </div>
           <div class="cert-footer">
-            <span>검증 항목: 개념 예측 · 오개념 진단 · 손계산 · 시뮬레이터 미션 · 파인만 설명 ({{ doneCount }}/{{ totalCount }})</span>
+            <span>메인 교안 저자: 이영빈 (@yblee110) · 5단계 능동 학습 검증 ({{ doneCount }}/{{ totalCount }})</span>
             <span class="cert-stamp">{{ allDone ? '✅ VERIFIED' : '⏳ IN PROGRESS' }}</span>
           </div>
         </div>

@@ -38,7 +38,7 @@ export default withMermaid(
             { text: 'Week 07 · Tiled MatMul과 컴파일 과정', link: '/week07/' }
           ]
         },
-        { text: '🧑‍🔬 연구원 아카이브', link: '/intro/contributors' }
+        { text: '✍️ 저자 & 연구원', link: '/intro/contributors' }
       ],
 
       sidebar: [
@@ -47,7 +47,7 @@ export default withMermaid(
           collapsed: false,
           items: [
             { text: '📖 T2S Lab 소개 & 5대 계층', link: '/intro/overview' },
-            { text: '🧑‍🔬 연구원 & 아카이브 매트릭스', link: '/intro/contributors' }
+            { text: '✍️ 대표 저자 & 연구원 아카이브', link: '/intro/contributors' }
           ]
         },
         {
@@ -200,8 +200,8 @@ export default withMermaid(
       },
 
       footer: {
-        message: 'Supported by MSIT & IITP (K-Cloud Project No. RS-2026-25521385) · ModuLabs LAB #811',
-        copyright: 'Copyright © 2026 Legato User Group & Tensor2Silicon LAB Contributors (Apache-2.0)'
+        message: '메인 교안 대표 집필 & 커리큘럼 설계: 이영빈 (Youngbin Lee, @yblee110) · Supported by MSIT & IITP (RS-2026-25521385)',
+        copyright: 'Copyright © 2026 Youngbin Lee (@yblee110), Legato User Group & Tensor2Silicon LAB Contributors (Apache-2.0)'
       }
     },
 

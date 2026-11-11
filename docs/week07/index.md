@@ -2,6 +2,21 @@
 
 # Tiled MatMul과 컴파일 과정 — 2차원 타일 재사용에서 GPU 기계어까지
 
+<div class="t2s-author-byline">
+  <div class="t2s-author-byline-main">
+    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />
+    <div class="t2s-author-meta">
+      <div class="t2s-author-title-row">
+        <span>✍️ <strong>메인 교안 집필 &amp; 커리큘럼 설계: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>
+        <span class="t2s-author-role-badge">🧭 T2S Lab 랩장 · Lead Author</span>
+      </div>
+      <div class="t2s-author-affil">모두의연구소 커뮤니티팀 팀장 · Google AI GDE · JAX-KR / GDG Incheon 오거나이저</div>
+    </div>
+  </div>
+  <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
+</div>
+
+
 > **7주차 핵심 질문**  
 > Python으로 작성한 2차원 Tiled MatMul 커널은 어떻게 타일 단위로 데이터를 재사용하며, 어떤 컴파일 단계를 거쳐 GPU 기계어로 바뀔까?
 

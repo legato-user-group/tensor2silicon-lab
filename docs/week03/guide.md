@@ -1,6 +1,20 @@
 <WeekNavBar :week="3" topic="커널의 시간은 어디에서 소비되는가" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송무복)', 'badge': 'GPU·TPU 메모리 계층 비교'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': '손계산 & 병목 판별'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': 'SRAM vs DRAM 물리 구조'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '수식 모델링 & 정량 분석'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': '메모리 계층 & 실전 예제'}]" />
 
 
+<div class="t2s-author-byline">
+  <div class="t2s-author-byline-main">
+    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />
+    <div class="t2s-author-meta">
+      <div class="t2s-author-title-row">
+        <span>🧭 <strong>주차 학습 안내 &amp; 손계산 예제 집필: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>
+        <span class="t2s-author-role-badge">Lead Author</span>
+      </div>
+      <div class="t2s-author-affil">T2S Lab 랩장 · 전 주차 커리큘럼 및 정량 계산 연습문제·해설 설계</div>
+    </div>
+  </div>
+  <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
+</div>
+
 **[3주차 안내] 커널의 시간은 어디에서 소비되는가**
 
 안녕하세요! 3주차에는 **커널이 계산하는 시간과 데이터를 옮기는 시간을 나누어 보고, 간단한 연산의 실행시간을 직접 추정**해보려고 합니다.

@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "Tensor2Silicon LAB"
   text: "AI 모델에서 가속기 커널까지"
-  tagline: "PyTorch·Transformer 수식 한 줄이 그래프(IR), 컴파일러, 런타임을 거쳐 GPU·TPU·NPU 실리콘 위에서 실행되기까지의 전 과정을 정량적 손계산·능동 학습 퀘스트·커널 실습으로 체득하는 오픈 리서치 웹북"
+  tagline: "PyTorch·Transformer 수식 한 줄이 그래프(IR), 컴파일러, 런타임을 거쳐 GPU·TPU·NPU 실리콘 위에서 실행되기까지의 전 과정을 정량적 손계산·능동 학습 퀘스트·커널 실습으로 체득하는 오픈 리서치 웹북 (메인 교안 집필: 이영빈 · yblee)"
   actions:
     - theme: brand
       text: "📖 웹북 읽기 시작하기 (랩 소개)"
@@ -26,16 +26,36 @@ features:
   - icon: ⚙️
     title: "다단계 컴파일러 & IR 실측 해부"
     details: "PyTorch(torch.compile), JAX(OpenXLA), Modular MAX, 그리고 Triton 커널이 TTIR → TTGIR → LLVM IR → PTX → SASS로 구체화되는 과정을 A100 및 RTX 5090 실측 데이터로 검증합니다."
-  - icon: 🧑‍🔬
-    title: "방식 A: 메인 교안 + 6인 연구원 Deep-Dive"
-    details: "체계적인 메인 교과서 흐름을 따라가면서도, 매 주차 6명의 연구원이 각자의 하드웨어와 시각에서 분석한 심화 리포트와 인터랙티브 슬라이드를 탭 한 번으로 함께 열람할 수 있습니다."
+  - icon: ✍️
+    title: "이영빈(yblee) 집필 메인 교안 + 연구원 실측"
+    details: "랩장 이영빈(yblee)이 전 주차 직접 설계·집필한 체계적인 메인 교과서를 중심으로, 5인의 연구원이 각자의 하드웨어에서 교차 검증한 심화 리포트를 함께 열람합니다."
 ---
+
+<div class="t2s-lead-author-card">
+  <div class="t2s-lead-author-left">
+    <img class="t2s-lead-author-avatar-lg" src="https://github.com/yblee110.png" alt="이영빈 (Youngbin Lee)" />
+    <div class="t2s-lead-author-info">
+      <h3>
+        <span>✍️ 메인 교안 대표 저자: 이영빈 (Youngbin Lee · <code>yblee</code>)</span>
+        <span class="t2s-author-role-badge">🧭 T2S Lab 랩장 · Lead Author</span>
+      </h3>
+      <p>
+        본 웹북의 전체 8주 커리큘럼 아키텍처 설계와 <strong>전 주차(Week 02 ~ Week 07) 메인 교안, 학습 안내, 정량적 손계산 예제 및 연습문제·해설을 직접 집필</strong>했습니다.<br/>
+        <small>모두의연구소 커뮤니티팀 팀장 (위탁연구개발기관 책임자) · Google AI GDE · JAX-KR / GDG Incheon 오거나이저</small>
+      </p>
+    </div>
+  </div>
+  <div class="t2s-lead-author-actions">
+    <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
+    <a class="t2s-author-gh-btn" href="./intro/contributors">전체 저자 &amp; 연구원 소개 →</a>
+  </div>
+</div>
 
 ## 🗺️ 커리큘럼 한눈에 바로가기 (Curriculum Roadmap)
 
-| 주차 | 주제 (Topic) | 능동 학습 퀘스트 & 인터랙티브 도구 (`5/5` 마스터리) | 바로가기 |
+| 주차 | 주제 (Topic) · 메인 교안 집필: 이영빈 (`yblee`) | 능동 학습 퀘스트 & 인터랙티브 도구 (`5/5` 마스터리) | 바로가기 |
 | :---: | :--- | :--- | :---: |
-| **Intro** | **랩 소개 & 5대 실행 스택** | T2S Lab 운영 원칙, 5대 계층 아키텍처, 연구원 아카이브 매트릭스 | [소개 보기](./intro/overview) |
+| **Intro** | **랩 소개 & 5대 실행 스택** | T2S Lab 운영 원칙, 5대 계층 아키텍처, 저자 & 연구원 아카이브 | [소개 보기](./intro/overview) |
 | **Week 02** | **모델에서 실리콘까지** | 실행 스택 역할 매칭 미션 + Epilogue Fusion 손계산 + **인터랙티브 HTML 슬라이드 덱** | [2주차 열기](./week02/) |
 | **Week 03** | **커널의 시간은 어디에서 소비되는가** | 용량 vs 대역폭 진단 + Fusion 속도 배수 계산 + **병목 전환 타일 탐색 미션** | [3주차 열기](./week03/) |
 | **Week 04** | **Roofline과 Tiling** | 산술 강도($I = F/Q$) 예측 + 타일 읽기량 손계산 + **Roofline & SRAM 제약 돌파 미션** | [4주차 열기](./week04/) |

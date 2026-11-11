@@ -1402,6 +1402,38 @@ def generate_all():
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
     (DOCS_DIR / "intro").mkdir(parents=True, exist_ok=True)
 
+    author_byline_main = (
+        '<div class="t2s-author-byline">\n'
+        '  <div class="t2s-author-byline-main">\n'
+        '    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />\n'
+        '    <div class="t2s-author-meta">\n'
+        '      <div class="t2s-author-title-row">\n'
+        '        <span>✍️ <strong>메인 교안 집필 &amp; 커리큘럼 설계: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>\n'
+        '        <span class="t2s-author-role-badge">🧭 T2S Lab 랩장 · Lead Author</span>\n'
+        '      </div>\n'
+        '      <div class="t2s-author-affil">모두의연구소 커뮤니티팀 팀장 · Google AI GDE · JAX-KR / GDG Incheon 오거나이저</div>\n'
+        '    </div>\n'
+        '  </div>\n'
+        '  <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>\n'
+        '</div>\n'
+    )
+
+    author_byline_guide = (
+        '<div class="t2s-author-byline">\n'
+        '  <div class="t2s-author-byline-main">\n'
+        '    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />\n'
+        '    <div class="t2s-author-meta">\n'
+        '      <div class="t2s-author-title-row">\n'
+        '        <span>🧭 <strong>주차 학습 안내 &amp; 손계산 예제 집필: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>\n'
+        '        <span class="t2s-author-role-badge">Lead Author</span>\n'
+        '      </div>\n'
+        '      <div class="t2s-author-affil">T2S Lab 랩장 · 전 주차 커리큘럼 및 정량 계산 연습문제·해설 설계</div>\n'
+        '    </div>\n'
+        '  </div>\n'
+        '  <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>\n'
+        '</div>\n'
+    )
+
     # 1. Build Home Page (docs/index.md)
     index_md = """---
 layout: home
@@ -1409,7 +1441,7 @@ layout: home
 hero:
   name: "Tensor2Silicon LAB"
   text: "AI 모델에서 가속기 커널까지"
-  tagline: "PyTorch·Transformer 수식 한 줄이 그래프(IR), 컴파일러, 런타임을 거쳐 GPU·TPU·NPU 실리콘 위에서 실행되기까지의 전 과정을 정량적 손계산·능동 학습 퀘스트·커널 실습으로 체득하는 오픈 리서치 웹북"
+  tagline: "PyTorch·Transformer 수식 한 줄이 그래프(IR), 컴파일러, 런타임을 거쳐 GPU·TPU·NPU 실리콘 위에서 실행되기까지의 전 과정을 정량적 손계산·능동 학습 퀘스트·커널 실습으로 체득하는 오픈 리서치 웹북 (메인 교안 집필: 이영빈 · yblee)"
   actions:
     - theme: brand
       text: "📖 웹북 읽기 시작하기 (랩 소개)"
@@ -1431,16 +1463,36 @@ features:
   - icon: ⚙️
     title: "다단계 컴파일러 & IR 실측 해부"
     details: "PyTorch(torch.compile), JAX(OpenXLA), Modular MAX, 그리고 Triton 커널이 TTIR → TTGIR → LLVM IR → PTX → SASS로 구체화되는 과정을 A100 및 RTX 5090 실측 데이터로 검증합니다."
-  - icon: 🧑‍🔬
-    title: "방식 A: 메인 교안 + 6인 연구원 Deep-Dive"
-    details: "체계적인 메인 교과서 흐름을 따라가면서도, 매 주차 6명의 연구원이 각자의 하드웨어와 시각에서 분석한 심화 리포트와 인터랙티브 슬라이드를 탭 한 번으로 함께 열람할 수 있습니다."
+  - icon: ✍️
+    title: "이영빈(yblee) 집필 메인 교안 + 연구원 실측"
+    details: "랩장 이영빈(yblee)이 전 주차 직접 설계·집필한 체계적인 메인 교과서를 중심으로, 5인의 연구원이 각자의 하드웨어에서 교차 검증한 심화 리포트를 함께 열람합니다."
 ---
+
+<div class="t2s-lead-author-card">
+  <div class="t2s-lead-author-left">
+    <img class="t2s-lead-author-avatar-lg" src="https://github.com/yblee110.png" alt="이영빈 (Youngbin Lee)" />
+    <div class="t2s-lead-author-info">
+      <h3>
+        <span>✍️ 메인 교안 대표 저자: 이영빈 (Youngbin Lee · <code>yblee</code>)</span>
+        <span class="t2s-author-role-badge">🧭 T2S Lab 랩장 · Lead Author</span>
+      </h3>
+      <p>
+        본 웹북의 전체 8주 커리큘럼 아키텍처 설계와 <strong>전 주차(Week 02 ~ Week 07) 메인 교안, 학습 안내, 정량적 손계산 예제 및 연습문제·해설을 직접 집필</strong>했습니다.<br/>
+        <small>모두의연구소 커뮤니티팀 팀장 (위탁연구개발기관 책임자) · Google AI GDE · JAX-KR / GDG Incheon 오거나이저</small>
+      </p>
+    </div>
+  </div>
+  <div class="t2s-lead-author-actions">
+    <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
+    <a class="t2s-author-gh-btn" href="./intro/contributors">전체 저자 &amp; 연구원 소개 →</a>
+  </div>
+</div>
 
 ## 🗺️ 커리큘럼 한눈에 바로가기 (Curriculum Roadmap)
 
-| 주차 | 주제 (Topic) | 능동 학습 퀘스트 & 인터랙티브 도구 (`5/5` 마스터리) | 바로가기 |
+| 주차 | 주제 (Topic) · 메인 교안 집필: 이영빈 (`yblee`) | 능동 학습 퀘스트 & 인터랙티브 도구 (`5/5` 마스터리) | 바로가기 |
 | :---: | :--- | :--- | :---: |
-| **Intro** | **랩 소개 & 5대 실행 스택** | T2S Lab 운영 원칙, 5대 계층 아키텍처, 연구원 아카이브 매트릭스 | [소개 보기](./intro/overview) |
+| **Intro** | **랩 소개 & 5대 실행 스택** | T2S Lab 운영 원칙, 5대 계층 아키텍처, 저자 & 연구원 아카이브 | [소개 보기](./intro/overview) |
 | **Week 02** | **모델에서 실리콘까지** | 실행 스택 역할 매칭 미션 + Epilogue Fusion 손계산 + **인터랙티브 HTML 슬라이드 덱** | [2주차 열기](./week02/) |
 | **Week 03** | **커널의 시간은 어디에서 소비되는가** | 용량 vs 대역폭 진단 + Fusion 속도 배수 계산 + **병목 전환 타일 탐색 미션** | [3주차 열기](./week03/) |
 | **Week 04** | **Roofline과 Tiling** | 산술 강도($I = F/Q$) 예측 + 타일 읽기량 손계산 + **Roofline & SRAM 제약 돌파 미션** | [4주차 열기](./week04/) |
@@ -1462,12 +1514,30 @@ features:
 
     # 3. Build Contributors Archive Matrix (docs/intro/contributors.md)
     contrib_lines = [
-        "# 🧑‍🔬 연구원 아카이브 & 주차별 기여 매트릭스\n",
-        "**Tensor2Silicon LAB**은 모든 연구원이 매주 직접 손계산, 코드 실습, 하드웨어 벤치마크, 교차 검증에 참여하여 함께 만들어가는 오픈 리서치 웹북입니다.\n",
-        "## 👥 연구원 프로필\n",
-        "| 프로필 | 이름 (핸들) | 주요 역할 및 관심 분야 | GitHub |",
+        "# ✍️ 대표 저자 & 연구원 아카이브\n",
+        "**Tensor2Silicon LAB** 웹북은 **랩장 이영빈(`yblee`)이 직접 설계·집필한 전 주차 메인 교과서 및 정량 계산 예제**를 중심축으로, 랩 연구원들이 매주 하드웨어 실측·다이어그램·교차 검증 리포트를 더해 완성한 오픈 리서치 웹북입니다.\n",
+        "## ✍️ 메인 교안 대표 저자 & 커리큘럼 총괄 (Lead Author)\n",
+        '<div class="t2s-lead-author-card">\n'
+        '  <div class="t2s-lead-author-left">\n'
+        '    <img class="t2s-lead-author-avatar-lg" src="https://github.com/yblee110.png" alt="이영빈 (Youngbin Lee)" />\n'
+        '    <div class="t2s-lead-author-info">\n'
+        '      <h3>\n'
+        '        <span>이영빈 (Youngbin Lee · <code>yblee</code>)</span>\n'
+        '        <span class="t2s-author-role-badge">🧭 T2S Lab 랩장 · 메인 교안 단독 집필</span>\n'
+        '      </h3>\n'
+        '      <p>\n'
+        '        <strong>담당 역할:</strong> 전체 커리큘럼 설계, 전 주차(<code>Week 02 ~ Week 07</code>) 메인 교안 집필, 주차별 학습 안내문 및 참고 계산 예제·연습문제·해설 집필<br/>\n'
+        '        <strong>소속 및 활동:</strong> 모두의연구소 커뮤니티팀 팀장 (위탁연구개발기관 책임자) · Google AI GDE · JAX-KR 오거나이저 · GDG Incheon 오거나이저\n'
+        '      </p>\n'
+        '    </div>\n'
+        '  </div>\n'
+        '  <div class="t2s-lead-author-actions">\n'
+        '    <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>\n'
+        '  </div>\n'
+        '</div>\n',
+        "## 🧑‍🔬 공동 검증 & 심화 리서치 연구원 (Lab Researchers)\n",
+        "| 프로필 | 이름 (핸들) | 주요 연구 기여 및 실측 분야 | GitHub |",
         "| :---: | :--- | :--- | :---: |",
-        "| <img src=\"https://github.com/yblee110.png\" width=\"56\" style=\"border-radius:50%\" /> | **이영빈 (`yblee`)** | 🧭 **랩장 (Lab Leader)** · 메인 교안 집필 및 커리큘럼 설계 | [@yblee110](https://github.com/yblee110) |",
         "| <img src=\"https://github.com/Jake-Song.png\" width=\"56\" style=\"border-radius:50%\" /> | **송무복 (`mbsong`)** | 🔬 A100 실측 IR 아티팩트 구축 · GPU/TPU 아키텍처 심층 비교 | [@Jake-Song](https://github.com/Jake-Song) |",
         "| <img src=\"https://github.com/SinGonKim.png\" width=\"56\" style=\"border-radius:50%\" /> | **김신곤 (`singon`)** | 🧮 정량적 손계산 해설 · 아키텍처 시각화 & RTX 4070 실측 | [@SinGonKim](https://github.com/SinGonKim) |",
         "| <img src=\"https://github.com/currybab.png\" width=\"56\" style=\"border-radius:50%\" /> | **박준 (`junpark`)** | 🔥 RTX 5090 (`sm_120`) PTX 실측 · 하드웨어 물리 계층 해부 | [@currybab](https://github.com/currybab) |",
@@ -1475,7 +1545,7 @@ features:
         "| <img src=\"https://github.com/eloqlo.png\" width=\"56\" style=\"border-radius:50%\" /> | **이재형 (`jaehyeong`)** | 📐 핵심 개념 요약 · 컴파일 파이프라인 & 타일링 구조 정리 | [@eloqlo](https://github.com/eloqlo) |\n",
         "---\n",
         "## 📚 주차별 전체 문서 아카이브 매트릭스\n",
-        "| 주차 | 📘 메인 교안 (`yblee`) | 🧭 안내 & 계산예제 | `mbsong` | `singon` | `junpark` | `injokim` | `jaehyeong` |",
+        "| 주차 | ✍️ 메인 교안 (집필: 이영빈) | 🧭 안내·예제 (집필: 이영빈) | `mbsong` | `singon` | `junpark` | `injokim` | `jaehyeong` |",
         "| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
     ]
 
@@ -1517,6 +1587,14 @@ features:
         main_processed = sanitize_markdown_for_vitepress(main_processed, week_num=w, is_researcher=False)
         main_processed = inject_active_learning(w, main_processed)
 
+        # Place Lead Author Byline right under the top `# Title`
+        main_processed = re.sub(
+            r'^(#\s+[^\n]+\n)',
+            lambda m: m.group(1) + "\n" + author_byline_main + "\n",
+            main_processed.lstrip(),
+            count=1
+        )
+
         # Collapse the long inline TOC (already shown on right sidebar) and place TldrMapCard right above it!
         main_processed, toc_subs = re.subn(
             r'\n## 목차\n(.*?)\n---\n',
@@ -1552,7 +1630,7 @@ features:
         (week_dir / "index.md").write_text(main_final, encoding="utf-8")
 
         # 4b. Guide & Reference Calculation Examples (docs/week0X/guide.md)
-        guide_parts = [nav_bar]
+        guide_parts = [nav_bar, author_byline_guide]
         if meta["guide_src"] and meta["guide_src"].exists():
             g_raw = meta["guide_src"].read_text(encoding="utf-8")
             if g_raw.lstrip().startswith("## "):

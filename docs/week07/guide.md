@@ -1,6 +1,20 @@
 <WeekNavBar :week="7" topic="Tiled MatMul과 컴파일 과정" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송무복)', 'badge': 'NVIDIA A100 IR·SASS 실측'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': 'RTX 5090 (sm_120) 실측 해부'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'L2 그룹핑 손계산 & IR 대응표'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '알고리즘 & MLIR 하향 변환 종합'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': '핵심 코드 & 컴파일 단계 요약'}]" />
 
 
+<div class="t2s-author-byline">
+  <div class="t2s-author-byline-main">
+    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />
+    <div class="t2s-author-meta">
+      <div class="t2s-author-title-row">
+        <span>🧭 <strong>주차 학습 안내 &amp; 손계산 예제 집필: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>
+        <span class="t2s-author-role-badge">Lead Author</span>
+      </div>
+      <div class="t2s-author-affil">T2S Lab 랩장 · 전 주차 커리큘럼 및 정량 계산 연습문제·해설 설계</div>
+    </div>
+  </div>
+  <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
+</div>
+
 **[7주차 안내] Tiled MatMul과 컴파일 과정**
 
 안녕하세요! 7주차에는 **Python으로 작성한 2차원 Tiled MatMul 커널이 어떻게 타일 단위로 데이터를 재사용하고, `@triton.jit` 아래에서 어떤 컴파일 단계를 거쳐 GPU 기계어로 바뀌는지** 함께 살펴보려고 합니다.
