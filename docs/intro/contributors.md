@@ -7,7 +7,7 @@
 | 프로필 | 이름 (핸들) | 주요 역할 및 관심 분야 | GitHub |
 | :---: | :--- | :--- | :---: |
 | <img src="https://github.com/yblee110.png" width="56" style="border-radius:50%" /> | **이영빈 (`yblee`)** | 🧭 **랩장 (Lab Leader)** · 메인 교안 집필 및 커리큘럼 설계 | [@yblee110](https://github.com/yblee110) |
-| <img src="https://github.com/Jake-Song.png" width="56" style="border-radius:50%" /> | **송민배 (`mbsong`)** | 🔬 A100 실측 IR 아티팩트 구축 · GPU/TPU 아키텍처 심층 비교 | [@Jake-Song](https://github.com/Jake-Song) |
+| <img src="https://github.com/Jake-Song.png" width="56" style="border-radius:50%" /> | **송무복 (`mbsong`)** | 🔬 A100 실측 IR 아티팩트 구축 · GPU/TPU 아키텍처 심층 비교 | [@Jake-Song](https://github.com/Jake-Song) |
 | <img src="https://github.com/SinGonKim.png" width="56" style="border-radius:50%" /> | **김신곤 (`singon`)** | 🧮 정량적 손계산 해설 · 아키텍처 시각화 & RTX 4070 실측 | [@SinGonKim](https://github.com/SinGonKim) |
 | <img src="https://github.com/currybab.png" width="56" style="border-radius:50%" /> | **박준 (`junpark`)** | 🔥 RTX 5090 (`sm_120`) PTX 실측 · 하드웨어 물리 계층 해부 | [@currybab](https://github.com/currybab) |
 | <img src="https://github.com/Kiminjo.png" width="56" style="border-radius:50%" /> | **김인조 (`injokim`)** | 🖥️ 인터랙티브 HTML 시각화 제작 · 수식 유도 & MLIR 파이프라인 정리 | [@Kiminjo](https://github.com/Kiminjo) |

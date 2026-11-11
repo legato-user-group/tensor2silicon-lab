@@ -30,7 +30,7 @@ WEEKS_META = {
         "researchers": [
             {
                 "id": "mbsong",
-                "name": "mbsong (송민배)",
+                "name": "mbsong (송무복)",
                 "badge": "PyTorch·XLA·MAX 2부작",
                 "files": [REPO_DIR / "week02" / "mbsong-1.md", REPO_DIR / "week02" / "mbsong-2.md"],
                 "summary": "PyTorch Eager/Compile부터 JAX·OpenXLA, Modular MAX·Mojo까지 실행 스택의 IR 변환과 런타임 디스패치 과정을 2부작으로 정밀 비교했습니다."
@@ -87,7 +87,7 @@ WEEKS_META = {
         "researchers": [
             {
                 "id": "mbsong",
-                "name": "mbsong (송민배)",
+                "name": "mbsong (송무복)",
                 "badge": "GPU·TPU 메모리 계층 비교",
                 "files": [REPO_DIR / "week03" / "mbsong.md"],
                 "summary": "Blackwell SM 구조와 TPU TensorCore(MXU/VPU/VMEM) 아키텍처를 대조하며 연산 시간·메모리 이동 시간·런치 오버헤드를 정량 분석했습니다."
@@ -132,7 +132,7 @@ WEEKS_META = {
         "researchers": [
             {
                 "id": "mbsong",
-                "name": "mbsong (송민배)",
+                "name": "mbsong (송무복)",
                 "badge": "Roofline & 타일 크기별 분석",
                 "files": [REPO_DIR / "week04" / "mbsong.md"],
                 "summary": "타일 크기(t=32, 64, 128)에 따른 HBM 이동량 감소와 산술 강도 변화를 로그 스케일 Roofline 그래프와 함께 완벽히 유도했습니다."
@@ -177,7 +177,7 @@ WEEKS_META = {
         "researchers": [
             {
                 "id": "mbsong",
-                "name": "mbsong (송민배)",
+                "name": "mbsong (송무복)",
                 "badge": "GPU vs TPU vs NPU 비교표",
                 "files": [REPO_DIR / "week05" / "mbsong.md"],
                 "summary": "SIMT 기반 GPU(H100)와 시스톨릭 어레이 기반 TPU(v5e/v6e)의 실행 모델, 캐시 vs 스크래치패드(VMEM) 제어 방식을 체계적으로 대조했습니다."
@@ -208,7 +208,7 @@ WEEKS_META = {
         "researchers": [
             {
                 "id": "mbsong",
-                "name": "mbsong (송민배)",
+                "name": "mbsong (송무복)",
                 "badge": "Vector Add & Fused Softmax",
                 "files": [REPO_DIR / "week06" / "mbsong.md"],
                 "summary": "CUDA 스레드 인덱싱과 Triton 블록 인덱싱을 대조하고, Fused Softmax가 HBM 왕복을 1/4로 줄이는 원리를 코드와 수식으로 정리했습니다."
@@ -253,7 +253,7 @@ WEEKS_META = {
         "researchers": [
             {
                 "id": "mbsong",
-                "name": "mbsong (송민배)",
+                "name": "mbsong (송무복)",
                 "badge": "NVIDIA A100 IR·SASS 실측",
                 "files": [REPO_DIR / "week07" / "mbsong.md"],
                 "summary": "A100(sm_80)에서 추출한 TTIR·TTGIR·LLVM IR·PTX·SASS 원본 산출물을 바탕으로 레이아웃 변환과 cp.async/mma.sync 매핑을 실증했습니다."
@@ -1468,7 +1468,7 @@ features:
         "| 프로필 | 이름 (핸들) | 주요 역할 및 관심 분야 | GitHub |",
         "| :---: | :--- | :--- | :---: |",
         "| <img src=\"https://github.com/yblee110.png\" width=\"56\" style=\"border-radius:50%\" /> | **이영빈 (`yblee`)** | 🧭 **랩장 (Lab Leader)** · 메인 교안 집필 및 커리큘럼 설계 | [@yblee110](https://github.com/yblee110) |",
-        "| <img src=\"https://github.com/Jake-Song.png\" width=\"56\" style=\"border-radius:50%\" /> | **송민배 (`mbsong`)** | 🔬 A100 실측 IR 아티팩트 구축 · GPU/TPU 아키텍처 심층 비교 | [@Jake-Song](https://github.com/Jake-Song) |",
+        "| <img src=\"https://github.com/Jake-Song.png\" width=\"56\" style=\"border-radius:50%\" /> | **송무복 (`mbsong`)** | 🔬 A100 실측 IR 아티팩트 구축 · GPU/TPU 아키텍처 심층 비교 | [@Jake-Song](https://github.com/Jake-Song) |",
         "| <img src=\"https://github.com/SinGonKim.png\" width=\"56\" style=\"border-radius:50%\" /> | **김신곤 (`singon`)** | 🧮 정량적 손계산 해설 · 아키텍처 시각화 & RTX 4070 실측 | [@SinGonKim](https://github.com/SinGonKim) |",
         "| <img src=\"https://github.com/currybab.png\" width=\"56\" style=\"border-radius:50%\" /> | **박준 (`junpark`)** | 🔥 RTX 5090 (`sm_120`) PTX 실측 · 하드웨어 물리 계층 해부 | [@currybab](https://github.com/currybab) |",
         "| <img src=\"https://github.com/Kiminjo.png\" width=\"56\" style=\"border-radius:50%\" /> | **김인조 (`injokim`)** | 🖥️ 인터랙티브 HTML 시각화 제작 · 수식 유도 & MLIR 파이프라인 정리 | [@Kiminjo](https://github.com/Kiminjo) |",

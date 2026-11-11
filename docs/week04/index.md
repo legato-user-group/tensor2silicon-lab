@@ -1,4 +1,4 @@
-<WeekNavBar :week="4" topic="Roofline과 Tiling" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'Roofline & 타일 크기별 분석'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': '4×4 & 4096×4096 완전 해설'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '2D Block Tiling 직관'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '이론 유도 & 연습문제 풀이'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': 'Roofline & Tiling 핵심 노트'}]" />
+<WeekNavBar :week="4" topic="Roofline과 Tiling" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송무복)', 'badge': 'Roofline & 타일 크기별 분석'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': '4×4 & 4096×4096 완전 해설'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '2D Block Tiling 직관'}, {'id': 'injokim', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '이론 유도 & 연습문제 풀이'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': 'Roofline & Tiling 핵심 노트'}]" />
 
 # Roofline과 Tiling — 같은 계산을 하면서 데이터를 덜 옮기는 법
 
@@ -67,7 +67,7 @@
   <div class="t2s-synthesis-card">
     <div>
       <div class="t2s-synthesis-card-head">
-        <span class="t2s-researcher-handle">🧑‍🔬 mbsong (송민배)</span>
+        <span class="t2s-researcher-handle">🧑‍🔬 mbsong (송무복)</span>
         <span class="t2s-researcher-tag">Roofline & 타일 크기별 분석</span>
       </div>
       <p>타일 크기(t=32, 64, 128)에 따른 HBM 이동량 감소와 산술 강도 변화를 로그 스케일 Roofline 그래프와 함께 완벽히 유도했습니다.</p>

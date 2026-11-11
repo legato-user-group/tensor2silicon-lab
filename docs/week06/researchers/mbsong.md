@@ -1,6 +1,6 @@
-<WeekNavBar :week="6" topic="Python에서 Triton 커널로" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'Vector Add & Fused Softmax'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'RTX 4070 실측 & 벤치마크'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': 'Online Softmax & IR 분석'}, {'id': 'kiminjo', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '블록 포인터 & 마스킹 정밀 해부'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': 'Triton 프로그래밍 핵심 요약'}]" />
+<WeekNavBar :week="6" topic="Python에서 Triton 커널로" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송무복)', 'badge': 'Vector Add & Fused Softmax'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'RTX 4070 실측 & 벤치마크'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': 'Online Softmax & IR 분석'}, {'id': 'kiminjo', 'name': 'injokim', 'label': 'injokim (김인조)', 'badge': '블록 포인터 & 마스킹 정밀 해부'}, {'id': 'jaehyeong', 'name': 'jaehyeong', 'label': 'jaehyeong (이재형)', 'badge': 'Triton 프로그래밍 핵심 요약'}]" />
 
-> 🧑‍🔬 **연구원 리서치 노트** — 작성자: **mbsong (송민배)** (`Vector Add & Fused Softmax`)
+> 🧑‍🔬 **연구원 리서치 노트** — 작성자: **mbsong (송무복)** (`Vector Add & Fused Softmax`)
 >
 > 💡 **핵심 기여 요약**: CUDA 스레드 인덱싱과 Triton 블록 인덱싱을 대조하고, Fused Softmax가 HBM 왕복을 1/4로 줄이는 원리를 코드와 수식으로 정리했습니다.
 

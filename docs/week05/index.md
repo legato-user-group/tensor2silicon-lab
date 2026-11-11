@@ -1,4 +1,4 @@
-<WeekNavBar :week="5" topic="xPU를 어떻게 비교할 것인가" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'GPU vs TPU vs NPU 비교표'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'xPU 비교 기준 & 손계산'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '아키텍처 심층 리서치'}]" />
+<WeekNavBar :week="5" topic="xPU를 어떻게 비교할 것인가" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송무복)', 'badge': 'GPU vs TPU vs NPU 비교표'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'xPU 비교 기준 & 손계산'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '아키텍처 심층 리서치'}]" />
 
 # xPU를 어떻게 비교할 것인가 — 사양표에서 실제 실행 조건까지
 
@@ -66,7 +66,7 @@
   <div class="t2s-synthesis-card">
     <div>
       <div class="t2s-synthesis-card-head">
-        <span class="t2s-researcher-handle">🧑‍🔬 mbsong (송민배)</span>
+        <span class="t2s-researcher-handle">🧑‍🔬 mbsong (송무복)</span>
         <span class="t2s-researcher-tag">GPU vs TPU vs NPU 비교표</span>
       </div>
       <p>SIMT 기반 GPU(H100)와 시스톨릭 어레이 기반 TPU(v5e/v6e)의 실행 모델, 캐시 vs 스크래치패드(VMEM) 제어 방식을 체계적으로 대조했습니다.</p>

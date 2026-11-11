@@ -1,4 +1,4 @@
-<WeekNavBar :week="5" topic="xPU를 어떻게 비교할 것인가" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송민배)', 'badge': 'GPU vs TPU vs NPU 비교표'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'xPU 비교 기준 & 손계산'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '아키텍처 심층 리서치'}]" />
+<WeekNavBar :week="5" topic="xPU를 어떻게 비교할 것인가" :researchers="[{'id': 'mbsong', 'name': 'mbsong', 'label': 'mbsong (송무복)', 'badge': 'GPU vs TPU vs NPU 비교표'}, {'id': 'singon', 'name': 'singon', 'label': 'singon (김신곤)', 'badge': 'xPU 비교 기준 & 손계산'}, {'id': 'junpark', 'name': 'junpark', 'label': 'junpark (박준)', 'badge': '아키텍처 심층 리서치'}]" />
 
 > 🧑‍🔬 **연구원 리서치 노트** — 작성자: **singon (김신곤)** (`xPU 비교 기준 & 손계산`)
 >
