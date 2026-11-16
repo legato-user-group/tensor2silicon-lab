@@ -6,7 +6,7 @@ const props = defineProps<{
   week?: number
   checkpointId?: string
   anchorId?: string
-  questType?: 'week03' | 'week04'
+  questType?: 'ch02' | 'ch03'
 }>()
 
 const { isCompleted, markCompleted } = useMasteryStore()
@@ -27,7 +27,7 @@ interface HwPreset {
 const presets: HwPreset[] = [
   {
     id: 'edu_fp32',
-    name: '🎓 3·4주차 가상 교육용 GPU (FP32: 20 TFLOPs, 1.0 TB/s)',
+    name: '🎓 교육용 표준 GPU — FP32 기준 (20 TFLOPs, 1.0 TB/s)',
     peakTflops: 20,
     bwTbs: 1.0,
     sramLimitKb: 164,
@@ -35,7 +35,7 @@ const presets: HwPreset[] = [
   },
   {
     id: 'edu_fp16',
-    name: '🎓 7주차 가상 교육용 GPU (FP16: 120 TFLOPs, 1.5 TB/s)',
+    name: '🎓 교육용 표준 GPU — FP16 기준 (120 TFLOPs, 1.5 TB/s)',
     peakTflops: 120,
     bwTbs: 1.5,
     sramLimitKb: 96,
@@ -206,11 +206,11 @@ function formatBytes(bytes: number) {
 }
 
 function verifyQuest() {
-  if (props.questType === 'week03') {
+  if (props.questType === 'ch02') {
     if (selectedPresetId.value !== 'edu_fp32') {
       questFeedback.value = {
         ok: false,
-        msg: '먼저 상단 드롭다운에서 「🎓 3·4주차 가상 교육용 GPU (FP32: 20 TFLOPs, 1.0 TB/s)」 프리셋을 선택해 주세요!'
+        msg: '먼저 상단 드롭다운에서 「🎓 교육용 표준 GPU — FP32 기준 (20 TFLOPs, 1.0 TB/s)」 프리셋을 선택해 주세요!'
       }
       return
     }
@@ -249,7 +249,7 @@ function verifyQuest() {
   if (selectedPresetId.value !== 'edu_fp16') {
     questFeedback.value = {
       ok: false,
-      msg: '먼저 상단 드롭다운에서 「🎓 7주차 가상 교육용 GPU (FP16: 120 TFLOPs, 1.5 TB/s)」 프리셋을 선택해 주세요!'
+      msg: '먼저 상단 드롭다운에서 「🎓 교육용 표준 GPU — FP16 기준 (120 TFLOPs, 1.5 TB/s)」 프리셋을 선택해 주세요!'
     }
     return
   }
@@ -285,12 +285,12 @@ function verifyQuest() {
         <span class="quest-tag">🎯 CHECKPOINT 4 · 시뮬레이터 실습 미션</span>
         <span class="quest-state">{{ questSolved ? '✅ 실습 미션 통과!' : '⏳ 직접 조작해 통과해 보세요' }}</span>
       </div>
-      <p v-if="questType === 'week03'" class="quest-desc">
-        <strong>미션 조건:</strong> 기본 프리셋 <code>🎓 3·4주차 가상 교육용 GPU (FP32: 20 TFLOPs, 1.0 TB/s)</code>와 <code>FP32 (4 Byte)</code> 상태에서,
+      <p v-if="questType === 'ch02'" class="quest-desc">
+        <strong>미션 조건:</strong> 기본 프리셋 <code>🎓 교육용 표준 GPU — FP32 기준 (20 TFLOPs, 1.0 TB/s)</code>와 <code>FP32 (4 Byte)</code> 상태에서,
         <code>🚧 메모리 대역폭 병목</code>을 벗어나 <strong><code>⚡ 연산 병목 구간 (Compute-Bound, I ≥ 20)</code>에 처음으로 진입하는 최소 정사각 출력 타일(<code>BM × BN</code>)</strong>을 찾아 선택한 뒤 아래 검증 버튼을 누르세요!
       </p>
       <p v-else class="quest-desc">
-        <strong>미션 조건:</strong> 하드웨어 프리셋을 <code>🎓 7주차 가상 교육용 GPU (FP16: 120 TFLOPs, 1.5 TB/s, SM 한도 96KB)</code>로 선택한 뒤,
+        <strong>미션 조건:</strong> 하드웨어 프리셋을 <code>🎓 교육용 표준 GPU — FP16 기준 (120 TFLOPs, 1.5 TB/s, SM 한도 96KB)</code>로 선택한 뒤,
         <strong>① 연산 병목 구간(Compute-Bound, I ≥ 80)에 도달</strong>하면서 동시에
         <strong>② 전체 파이프라인 Shared Memory가 96 KB 이하(경고 없음)</strong>가 되도록 타일 조합(<code>BM×BN</code>, <code>BK</code>, <code>stg</code>)을 맞추고 아래 검증 버튼을 누르세요!
       </p>

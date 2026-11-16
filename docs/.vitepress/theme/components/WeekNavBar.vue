@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRoute, withBase } from 'vitepress'
 
 const props = defineProps<{
-  week: number
+  chapter: number
   topic: string
   researchers: Array<{
     id: string
@@ -15,7 +15,7 @@ const props = defineProps<{
 
 const route = useRoute()
 
-const weekPrefix = computed(() => `/week0${props.week}`)
+const chapterPrefix = computed(() => `/ch0${props.chapter}`)
 
 function isActive(targetPath: string) {
   const fullTarget = withBase(targetPath).replace(/\.html$/, '').replace(/\/$/, '')
@@ -28,7 +28,7 @@ function isActive(targetPath: string) {
   <div class="t2s-week-nav">
     <div class="t2s-week-nav-header">
       <div class="t2s-week-nav-left">
-        <span class="t2s-week-badge">WEEK 0{{ week }}</span>
+        <span class="t2s-week-badge">CHAPTER 0{{ chapter }}</span>
         <span class="t2s-week-topic">{{ topic }}</span>
       </div>
       <a
@@ -36,40 +36,40 @@ function isActive(targetPath: string) {
         target="_blank"
         rel="noopener"
         class="t2s-lead-author-chip"
-        title="메인 교안 집필 및 커리큘럼 설계: 이영빈 (@yblee110)"
+        title="본문 집필 및 커리큘럼 설계: 이영빈 (@yblee110)"
       >
         <img src="https://github.com/yblee110.png" alt="이영빈" class="author-chip-avatar" />
-        <span>✍️ 메인 교안 집필: <strong>이영빈 (yblee)</strong></span>
+        <span>✍️ 대표 저자: <strong>이영빈 (yblee)</strong></span>
       </a>
     </div>
     <div class="t2s-week-nav-tabs">
       <div class="t2s-tab-group main-tabs">
         <a
-          :href="withBase(`${weekPrefix}/`)"
+          :href="withBase(`${chapterPrefix}/`)"
           class="t2s-tab"
-          :class="{ active: isActive(`${weekPrefix}/`) || isActive(`${weekPrefix}/index`) }"
+          :class="{ active: isActive(`${chapterPrefix}/`) || isActive(`${chapterPrefix}/index`) }"
         >
-          <span>📘 메인 교안</span>
+          <span>📘 본문 교안</span>
           <span class="pill-sub">집필: 이영빈</span>
         </a>
         <a
-          :href="withBase(`${weekPrefix}/guide`)"
+          :href="withBase(`${chapterPrefix}/guide`)"
           class="t2s-tab"
-          :class="{ active: isActive(`${weekPrefix}/guide`) }"
+          :class="{ active: isActive(`${chapterPrefix}/guide`) }"
         >
-          <span>🧭 학습 안내 & 예제</span>
+          <span>🧭 단원 요약 &amp; 연습</span>
           <span class="pill-sub">yblee</span>
         </a>
       </div>
       <div class="t2s-tab-divider"></div>
       <div class="t2s-tab-group researcher-tabs">
-        <span class="t2s-tab-group-label">🧑‍🔬 연구원 리서치 노트:</span>
+        <span class="t2s-tab-group-label">🧑‍🔬 연구진 심화 노트:</span>
         <a
           v-for="r in researchers"
           :key="r.id"
-          :href="withBase(`${weekPrefix}/researchers/${r.id}`)"
+          :href="withBase(`${chapterPrefix}/researchers/${r.id}`)"
           class="t2s-tab researcher-pill"
-          :class="{ active: isActive(`${weekPrefix}/researchers/${r.id}`) }"
+          :class="{ active: isActive(`${chapterPrefix}/researchers/${r.id}`) }"
         >
           <span>{{ r.name }}</span>
           <span v-if="r.badge" class="pill-sub">{{ r.badge }}</span>

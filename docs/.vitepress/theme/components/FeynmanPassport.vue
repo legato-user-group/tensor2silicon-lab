@@ -63,21 +63,21 @@ function updateName() {
 }
 
 const verificationCode = computed(() => {
-  const baseStr = `${nameInput.value.trim() || 'T2S-READER'}-W0${props.week}-${userAnswer.value.length}`
+  const baseStr = `${nameInput.value.trim() || 'T2S-READER'}-CH0${props.week}-${userAnswer.value.length}`
   let hash = 2166136261
   for (let i = 0; i < baseStr.length; i++) {
     hash ^= baseStr.charCodeAt(i)
     hash = Math.imul(hash, 16777619)
   }
   const hex = (hash >>> 0).toString(16).toUpperCase().padStart(8, '0')
-  return `T2S-W0${props.week}-${hex.slice(0, 6)}`
+  return `T2S-CH0${props.week}-${hex.slice(0, 6)}`
 })
 
 const shareMarkdown = computed(() => {
-  const reader = nameInput.value.trim() || '익명 연구원'
+  const reader = nameInput.value.trim() || '익명 독자'
   const note = userAnswer.value.trim() || '(직접 작성한 한 줄 요약)'
   return (
-    `### 🏅 [Week 0${props.week} 완독 인증] ${props.weekTitle}\n` +
+    `### 🏅 [Chapter 0${props.week} 완독 인증] ${props.weekTitle}\n` +
     `- **독자**: ${reader}\n` +
     `- **검증 코드**: \`${verificationCode.value}\` (${doneCount.value}/${totalCount.value} 체크포인트 통과)\n` +
     `- **나의 핵심 질문 한 줄 설명**:\n  > ${note}\n`
@@ -133,7 +133,7 @@ async function copyCertification() {
       <!-- Unlocked Model Answer + Self-Check Rubric -->
       <div v-if="unlockedModel || feynmanDone" class="f-model-panel">
         <div class="model-answer-card">
-          <strong>📘 교안 모범 답안</strong>
+          <strong>📘 모범 답안</strong>
           <p>{{ modelAnswer }}</p>
         </div>
 
@@ -159,8 +159,8 @@ async function copyCertification() {
     <div class="passport-section">
       <div class="passport-header">
         <div>
-          <span class="p-eyebrow">🏅 COMPLETION PASSPORT & COMMUNITY PROOF</span>
-          <h4 class="p-title">Week 0{{ week }} 완독 인증 패스포트 & 한 줄 방명록</h4>
+          <span class="p-eyebrow">🏅 COMPLETION PASSPORT &amp; CERTIFICATE</span>
+          <h4 class="p-title">Chapter 0{{ week }} 완독 인증 패스포트</h4>
         </div>
         <button
           v-if="!allDone"
@@ -175,7 +175,7 @@ async function copyCertification() {
       <div v-if="!allDone && !previewPassport" class="passport-locked">
         <p>
           현재 <strong>{{ doneCount }} / {{ totalCount }}</strong>개의 이해도 관문을 완료했습니다.
-          본문 중간의 체크포인트와 실습 미션을 모두 통과하면 <strong>Week 0{{ week }} 완독 인증 패스포트</strong>가 발급됩니다!
+          본문 중간의 체크포인트와 실습 미션을 모두 통과하면 <strong>Chapter 0{{ week }} 완독 인증 패스포트</strong>가 발급됩니다!
         </p>
       </div>
 
@@ -190,7 +190,7 @@ async function copyCertification() {
             v-model="nameInput"
             type="text"
             class="p-name-input"
-            placeholder="예: @yblee110 또는 홍길동"
+            placeholder="예: @github-id 또는 홍길동"
             @input="updateName"
           />
         </div>
@@ -198,21 +198,21 @@ async function copyCertification() {
         <!-- Visual Digital Certificate Card -->
         <div class="digital-certificate" :class="{ official: allDone }">
           <div class="cert-top">
-            <span class="cert-org">TENSOR2SILICON LAB · OPEN RESEARCH WEBBOOK</span>
+            <span class="cert-org">TENSOR2SILICON · FROM TENSOR TO SILICON WEBBOOK</span>
             <span class="cert-code">{{ verificationCode }}</span>
           </div>
           <div class="cert-main">
-            <div class="cert-week">WEEK 0{{ week }} MASTERY CERTIFICATE</div>
+            <div class="cert-week">CHAPTER 0{{ week }} MASTERY CERTIFICATE</div>
             <div class="cert-topic">{{ weekTitle }}</div>
             <div class="cert-reader">
-              완독 연구원: <strong>{{ nameInput.trim() || '이름을 입력해 주세요' }}</strong>
+              완독 독자: <strong>{{ nameInput.trim() || '이름을 입력해 주세요' }}</strong>
             </div>
           </div>
           <div class="cert-quote" v-if="userAnswer.trim()">
             “{{ userAnswer.trim() }}”
           </div>
           <div class="cert-footer">
-            <span>메인 교안 저자: 이영빈 (@yblee110) · 5단계 능동 학습 검증 ({{ doneCount }}/{{ totalCount }})</span>
+            <span>대표 저자: 이영빈 (@yblee110) · 5단계 능동 학습 검증 ({{ doneCount }}/{{ totalCount }})</span>
             <span class="cert-stamp">{{ allDone ? '✅ VERIFIED' : '⏳ IN PROGRESS' }}</span>
           </div>
         </div>
@@ -223,16 +223,16 @@ async function copyCertification() {
             {{ copied ? '✅ 클립보드에 복사되었습니다!' : '📋 완독 인증 마크다운 복사하기' }}
           </button>
           <a
-            :href="`https://github.com/legato-user-group/tensor2silicon-lab/issues/new?title=${encodeURIComponent(`[Week 0${week} 완독 인증] ${weekTitle}`)}`"
+            :href="`https://github.com/legato-user-group/tensor2silicon-lab/issues/new?title=${encodeURIComponent(`[Chapter 0${week} 완독 인증] ${weekTitle}`)}`"
             target="_blank"
             rel="noopener"
             class="share-btn secondary"
           >
-            💬 GitHub 레포에 완독 인증 & 인사이트 남기기 ↗
+            💬 GitHub 레포에 완독 인증 &amp; 인사이트 남기기 ↗
           </a>
         </div>
         <p class="share-help">
-          💡 위 <strong>복사하기</strong> 버튼을 누른 뒤 GitHub 인증 스레드나 스터디 채널에 붙여넣으면, 누가 어떤 인사이트를 얻으며 완독했는지 팀 전체가 한눈에 확인할 수 있습니다.
+          💡 위 <strong>복사하기</strong> 버튼을 누른 뒤 GitHub 이슈나 커뮤니티 채널에 공유하면, 각 장을 완독하며 정리한 핵심 인사이트를 기록으로 남길 수 있습니다.
         </p>
       </div>
     </div>

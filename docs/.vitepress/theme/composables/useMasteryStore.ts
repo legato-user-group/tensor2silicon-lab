@@ -6,7 +6,7 @@ export interface MasteryState {
   readerName: string
 }
 
-const STORAGE_KEY = 't2s_mastery_v1'
+const STORAGE_KEY = 't2s_mastery_book_v1'
 
 const state = ref<MasteryState>({
   completed: {},
@@ -47,37 +47,37 @@ function persist() {
 export function useMasteryStore() {
   initStore()
 
-  function weekKey(week: number) {
-    return `week0${week}`
+  function chapterKey(chapter: number) {
+    return `ch0${chapter}`
   }
 
-  function isCompleted(week: number, checkpointId: string): boolean {
-    const wk = weekKey(week)
-    return Boolean(state.value.completed[wk]?.[checkpointId])
+  function isCompleted(chapter: number, checkpointId: string): boolean {
+    const ck = chapterKey(chapter)
+    return Boolean(state.value.completed[ck]?.[checkpointId])
   }
 
-  function markCompleted(week: number, checkpointId: string) {
-    const wk = weekKey(week)
-    if (!state.value.completed[wk]) {
-      state.value.completed[wk] = {}
+  function markCompleted(chapter: number, checkpointId: string) {
+    const ck = chapterKey(chapter)
+    if (!state.value.completed[ck]) {
+      state.value.completed[ck] = {}
     }
-    if (!state.value.completed[wk][checkpointId]) {
-      state.value.completed[wk][checkpointId] = true
+    if (!state.value.completed[ck][checkpointId]) {
+      state.value.completed[ck][checkpointId] = true
       persist()
     }
   }
 
-  function getCompletedCount(week: number, checkpointIds: string[]): number {
-    return checkpointIds.filter((id) => isCompleted(week, id)).length
+  function getCompletedCount(chapter: number, checkpointIds: string[]): number {
+    return checkpointIds.filter((id) => isCompleted(chapter, id)).length
   }
 
-  function saveFeynmanNote(week: number, note: string) {
-    state.value.feynmanNotes[weekKey(week)] = note
+  function saveFeynmanNote(chapter: number, note: string) {
+    state.value.feynmanNotes[chapterKey(chapter)] = note
     persist()
   }
 
-  function getFeynmanNote(week: number): string {
-    return state.value.feynmanNotes[weekKey(week)] || ''
+  function getFeynmanNote(chapter: number): string {
+    return state.value.feynmanNotes[chapterKey(chapter)] || ''
   }
 
   function setReaderName(name: string) {
@@ -85,10 +85,10 @@ export function useMasteryStore() {
     persist()
   }
 
-  function resetWeek(week: number) {
-    const wk = weekKey(week)
-    state.value.completed[wk] = {}
-    delete state.value.feynmanNotes[wk]
+  function resetWeek(chapter: number) {
+    const ck = chapterKey(chapter)
+    state.value.completed[ck] = {}
+    delete state.value.feynmanNotes[ck]
     persist()
   }
 

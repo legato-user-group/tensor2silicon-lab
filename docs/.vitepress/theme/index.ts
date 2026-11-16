@@ -13,13 +13,13 @@ import ConceptMatchQuest from './components/ConceptMatchQuest.vue'
 import { useMasteryStore } from './composables/useMasteryStore'
 import './custom.css'
 
-const WEEK_CP_MAP: Record<number, string[]> = {
+const CHAPTER_CP_MAP: Record<number, string[]> = {
+  1: ['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman'],
   2: ['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman'],
-  3: ['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman'],
-  4: ['cp1-roofline', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman'],
+  3: ['cp1-roofline', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman'],
+  4: ['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman'],
   5: ['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman'],
-  6: ['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman'],
-  7: ['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']
+  6: ['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']
 }
 
 function updateSidebarBadges() {
@@ -29,13 +29,13 @@ function updateSidebarBadges() {
   const links = document.querySelectorAll<HTMLAnchorElement>('.VPSidebar a')
   links.forEach((link) => {
     const href = link.getAttribute('href') || ''
-    const match = href.match(/\/week0([2-7])\/?(?:$|\?|#)/)
+    const match = href.match(/\/ch0([1-6])\/?(?:$|\?|#)/)
     if (match && !href.includes('/guide') && !href.includes('/researchers')) {
-      const weekNum = Number(match[1])
-      const cpIds = WEEK_CP_MAP[weekNum]
+      const chNum = Number(match[1])
+      const cpIds = CHAPTER_CP_MAP[chNum]
       if (!cpIds) return
 
-      const done = getCompletedCount(weekNum, cpIds)
+      const done = getCompletedCount(chNum, cpIds)
       const total = cpIds.length
 
       const target = link.querySelector<HTMLElement>('.text') || link

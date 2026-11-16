@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-T2S Lab WebBook (VitePress) Content Builder — Method A (방식 A)
-Integrates:
-1. Main Lecture Notes (/home/leeyb/t2s/[N주차 교안]*.md & tensor2silicon-lab-main/week0N/yblee.md)
-2. Weekly Guides & Reference Calculation Examples (/home/leeyb/t2s/[N주차 안내]*.md & [N주차 참고자료]*.md)
-3. Researcher Deep-Dive Highlights & Full Researcher Notes (week02 ~ week07)
-4. Interactive Simulators & HTML Decks
+Tensor2Silicon WebBook (VitePress) Content Builder — Finished 6-Chapter Edition
+Transforms the curriculum into a complete, standalone 6-Chapter Technical WebBook (Chapter 01 ~ Chapter 06):
+1. Main Chapters (/ch01/ ~ /ch06/) authored by Youngbin Lee (yblee)
+2. Chapter Summaries & Calculation Exercises (/ch01/guide ~ /ch06/guide)
+3. Researcher Deep-Dive & Hardware Benchmark Notes (/ch01/researchers/* ~ /ch06/researchers/*)
+4. 5-Stage Active Learning Checkpoints, Quests, Simulators & Mastery Certificates
 """
 
+import json
 import os
 import re
-import glob
+import shutil
 from pathlib import Path
 
 ROOT_DIR = Path("/home/leeyb/t2s")
@@ -19,8 +20,9 @@ REPO_DIR = ROOT_DIR / "tensor2silicon-lab-main"
 BOOK_DIR = ROOT_DIR / "t2s_gitbook"
 DOCS_DIR = BOOK_DIR / "docs"
 
-WEEKS_META = {
-    2: {
+CHAPTERS_META = {
+    1: {
+        "orig_week": 2,
         "title": "모델에서 실리콘까지",
         "subtitle": "AI 실행 스택 5대 계층 해부 — PyTorch, JAX·OpenXLA, Modular MAX·Mojo, Triton",
         "question": "모델의 연산 하나가 가속기에서 실행되기까지 어떤 단계를 거치며, 각 단계는 무엇을 담당할까?",
@@ -57,7 +59,7 @@ WEEKS_META = {
                 "html_decks": [
                     {
                         "src": "/decks/injokim-week02.html",
-                        "title": "AI 실행 스택 인터랙티브 학습 노트 (injokim.html)",
+                        "title": "AI 실행 스택 인터랙티브 학습 노트",
                         "desc": "김인조 연구원이 제작한 인터랙티브 실행 스택 비교 및 학습 노트입니다."
                     },
                     {
@@ -77,7 +79,8 @@ WEEKS_META = {
             }
         ]
     },
-    3: {
+    2: {
+        "orig_week": 3,
         "title": "커널의 시간은 어디에서 소비되는가",
         "subtitle": "연산 시간 vs 메모리 이동 시간, HBM 대역폭, Vector Add와 Kernel Fusion",
         "question": "같은 연산인데 왜 어떤 커널은 빠르고 어떤 커널은 느릴까? 계산 시간과 데이터 이동 시간을 어떻게 구분할까?",
@@ -122,7 +125,8 @@ WEEKS_META = {
             }
         ]
     },
-    4: {
+    3: {
+        "orig_week": 4,
         "title": "Roofline과 Tiling",
         "subtitle": "산술 강도(I = F/Q), Roofline 상한 모델, 온칩 메모리 데이터 재사용",
         "question": "같은 계산을 하면서 데이터를 덜 읽어오면 커널은 얼마나 빨라질 수 있을까?",
@@ -167,7 +171,8 @@ WEEKS_META = {
             }
         ]
     },
-    5: {
+    4: {
+        "orig_week": 5,
         "title": "xPU를 어떻게 비교할 것인가",
         "subtitle": "GPU, TPU, NPU/LPU 아키텍처 비교 기준 — 연산 유닛, 메모리 계층, 제어 모델",
         "question": "GPU, TPU, NPU/LPU 등 서로 다른 가속기 아키텍처와 프로그래밍 모델을 어떤 기준으로 비교할까?",
@@ -198,7 +203,8 @@ WEEKS_META = {
             }
         ]
     },
-    6: {
+    5: {
+        "orig_week": 6,
         "title": "Python에서 Triton 커널로",
         "subtitle": "1D 블록 프로그래밍(tl.arange, mask), Fused Online Softmax, 온칩 SRAM 재사용",
         "question": "Python 기반 커널 DSL(Triton)로 블록 단위 프로그래밍과 메모리 접근을 어떻게 제어할까?",
@@ -243,7 +249,8 @@ WEEKS_META = {
             }
         ]
     },
-    7: {
+    6: {
+        "orig_week": 7,
         "title": "Tiled MatMul과 컴파일 과정",
         "subtitle": "2D 포인터 브로드캐스팅, L2 Grouped Ordering, Autotune, 다단계 IR(TTIR→TTGIR→PTX→SASS)",
         "question": "Python으로 작성한 2D Tiled MatMul 커널은 어떻게 데이터를 재사용하며, 어떤 컴파일 단계를 거쳐 GPU 기계어가 될까?",
@@ -291,16 +298,223 @@ WEEKS_META = {
 }
 
 
-def sanitize_markdown_for_vitepress(md_text: str, week_num: int, is_researcher: bool = False) -> str:
+def normalize_to_finished_book(md_text: str) -> str:
     """
-    Cleans up markdown edge cases so VitePress (Vue 3 + markdown-it-mathjax3 + Mermaid) compiles cleanly:
-    1. Fixes malformed ![alt](<img ... src="URL" />) in week06/singon.md
-    2. Maps /home/leeyb/t2s/assets/week04/... and ./assets/roofline.png to /assets/week04/...
-    3. Maps mbsong's relative repo links/images to Jake-Song/tensor2silicon GitHub URLs
-    4. Replaces missing Notion-exported local image paths (e.g. image.png, image%201.png) with a clean notice badge
-    5. Protects raw <angle_brackets> and {{ curly }} outside of code blocks/math from breaking Vue template compiler
+    Converts all study-schedule / weekly phrasing ('N주차', '이번 주', '다음 주', '지난 주', etc.)
+    into polished, finished technical book terminology ('M장', '이 장', '다음 장', '앞선 장', etc.)
+    with accurate Korean batchim particle conjugation and matching anchor slugs.
     """
-    # 0. Remove stray zero-width spaces (e.g., in week02 heading)
+    # 1. Rewrite relative local guide/reference markdown file links to ./guide
+    md_text = re.sub(
+        r'\]\(<(?:\./)?\[\d주차[^)\n>]+>\)',
+        '](./guide)',
+        md_text
+    )
+    md_text = re.sub(
+        r'\]\((?:\./)?%5B\d%EC%A3%BC%EC%B0%A8[^)\n]+\)',
+        '](./guide)',
+        md_text
+    )
+    md_text = re.sub(
+        r'\]\(\.\./week0?([2-7])(?:/[^\)]*)?\)',
+        lambda m: f'](/ch0{int(m.group(1)) - 1}/)',
+        md_text
+    )
+
+    # 2. Remove casual meetup sign-offs
+    md_text = re.sub(r'^\s*그럼\s*다음\s*주\s*화요일에\s*뵙겠습니다!?\s*$', '', md_text, flags=re.MULTILINE)
+
+    # 3. Convert 8주차 / Legato future-week references into standalone Future Horizon phrasing
+    legato_replacements = [
+        ("이번 주의 범위와 8주차(Legato) 연결", "이 장의 범위와 차세대 IR(Legato) 확장 전망"),
+        ("이번-주의-범위와-8주차legato-연결", "이-장의-범위와-차세대-irlegato-확장-전망"),
+        ("이번 주 범위에서 제외하거나 8주차로 넘기는 것", "이 장의 범위 밖이거나 차세대 IR(Legato) 연구로 확장되는 주제"),
+        ("공동 검토 항목과 8주차(Legato) 연결", "공동 검토 항목과 차세대 IR(Legato) 확장"),
+        ("### 8주차 “Legato는 무엇을 해결해야 하는가”로 이어지는 질문", "### 차세대 개방형 IR “Legato는 무엇을 해결해야 하는가”로 이어지는 질문"),
+        ("토론 질문과 8주차 “Legato는 무엇을 해결해야 하는가”로 이어지는 질문", "핵심 토론 질문과 차세대 IR(Legato)로 이어지는 전망"),
+        ("토론-질문과-8주차-legato는-무엇을-해결해야-하는가로-이어지는-질문", "핵심-토론-질문과-차세대-irlegato로-이어지는-전망"),
+        ("다음 8주차에는 이 관점을 그대로 가지고", "이 책의 여정을 넘어서는 다음 단계에서는 이 관점을 그대로 확장하여"),
+        ("다음 8주차 **“Legato는 무엇을 해결해야 하는가”**에서", "차세대 개방형 IR 연구 주제인 **“Legato는 무엇을 해결해야 하는가”**에서"),
+        ("8주차 Legato 연결 질문", "차세대 IR(Legato) 확장 질문"),
+        ("8주차 연결(Legato를 향하여)", "차세대 IR 확장(Legato를 향하여)"),
+        ("**8주차:**", "**심화 확장(Legato):**"),
+        ("8주차 **Legato**", "차세대 개방형 IR **Legato**"),
+        ("8주차(Legato)", "차세대 IR(Legato)"),
+        ("8주차에는", "심화 확장 단계에서는"),
+        ("8주차에", "심화 확장 단계에서"),
+        ("8주차로", "심화 연구 영역으로"),
+        ("8주차", "심화 확장 단계"),
+    ]
+    for old, new in legato_replacements:
+        md_text = md_text.replace(old, new)
+
+    # 4. Polish study-meetup section titles & matching TOC anchor slugs into book section titles
+    study_heading_replacements = [
+        ("스터디에서 설명하고 함께 점검하기", "핵심 질문으로 스스로 설명하고 점검하기"),
+        ("스터디에서-설명하고-함께-점검하기", "핵심-질문으로-스스로-설명하고-점검하기"),
+        ("스터디 발표와 용어 정리", "핵심 설명 점검과 용어 정리"),
+        ("스터디-발표와-용어-정리", "핵심-설명-점검과-용어-정리"),
+    ]
+    for old, new in study_heading_replacements:
+        md_text = md_text.replace(old, new)
+
+    # 5. Document title bracket prefixes like [3주차 안내], [4주차 참고자료], [6주차 교안]
+    def replace_bracket_doc_label(m):
+        w = int(m.group(1))
+        ch = max(1, w - 1)
+        kind = m.group(2).strip()
+        if "안내" in kind:
+            return f"[Chapter 0{ch} 단원 요약]"
+        elif "참고자료" in kind:
+            return f"[Chapter 0{ch} 계산 연습]"
+        elif "교안" in kind:
+            return f"[Chapter 0{ch} 본문]"
+        return f"[Chapter 0{ch} {kind}]"
+
+    md_text = re.sub(r'\[([2-7])주차\s*([^\]]+)\]', replace_bracket_doc_label, md_text)
+
+    # 6. Helper to conjugate Korean batchim particles when replacing '...주차' (vowel-ending) -> '...장' ('ㅇ' batchim)
+    def conjugate_jucha_suffix(base_replacement: str, suffix: str) -> str:
+        particle_map = {
+            "가": "이",
+            "를": "을",
+            "는": "은",
+            "와": "과",
+            "로": "으로",
+            "다": "이다",
+        }
+        return base_replacement + particle_map.get(suffix, suffix)
+
+    # 6a. Compound week ranges/lists -> chapter ranges/lists (e.g., 3·4·6주차와 -> 2·3·5장과, 3~5주차에 -> 2~4장에)
+    def replace_compound_weeks(m):
+        expr = m.group(1)  # e.g., '3·4·6' or '3~5' or '4·5'
+        suffix = m.group(2) or ""
+
+        def shift_num(nm):
+            val = int(nm.group(0))
+            return str(max(1, val - 1))
+
+        shifted = re.sub(r'[2-7]', shift_num, expr)
+        return conjugate_jucha_suffix(f"{shifted}장", suffix)
+
+    md_text = re.sub(
+        r'([2-7](?:[·,~][2-7])+)주차(가|를|는|와|로|다(?=[.\s,:;!?)]|$))?',
+        replace_compound_weeks,
+        md_text
+    )
+
+    # 6b. "이번 N주차" -> "이 M장"
+    def replace_this_week_num(m):
+        ch = max(1, int(m.group(1)) - 1)
+        suffix = m.group(2) or ""
+        return conjugate_jucha_suffix(f"이 {ch}장", suffix)
+
+    md_text = re.sub(
+        r'이번\s*([2-7])주차(가|를|는|와|로|다(?=[.\s,:;!?)]|$))?',
+        replace_this_week_num,
+        md_text
+    )
+
+    # 6c. Single week number "N주차" -> "M장" (including inside heading slugs like 4주차-타일 -> 3장-타일)
+    def replace_single_week_num(m):
+        ch = max(1, int(m.group(1)) - 1)
+        suffix = m.group(2) or ""
+        return conjugate_jucha_suffix(f"{ch}장", suffix)
+
+    md_text = re.sub(
+        r'([2-7])주차(가|를|는|와|로|다(?=[.\s,:;!?)]|$))?',
+        replace_single_week_num,
+        md_text
+    )
+
+    # 7. Convert '이번 주', '다음 주', '지난 주', '주차별', etc. (including TOC anchor slugs!)
+    phrase_replacements = [
+        # Anchor slugs first
+        ("이번-주에-알아야-할-큰-그림", "이-장에서-알아야-할-큰-그림"),
+        ("이번-주-공부의", "이-장-학습의"),
+        ("이번-주의", "이-장의"),
+        ("이번-주", "이-장"),
+        ("다음-주-연결", "다음-장-연결"),
+        ("다음-주", "다음-장"),
+        ("지난-주차", "앞선-장"),
+        ("지난주와-", "앞선-장과-"),
+        ("지난주-", "앞선-장-"),
+        # Prose phrases
+        ("이번 주에 알아야 할 큰 그림", "이 장에서 알아야 할 큰 그림"),
+        ("한눈에 보는 이번 주 핵심 직관", "한눈에 보는 이 장의 핵심 직관"),
+        ("이번 주 공부의 5단계 학습 흐름", "이 장의 5단계 학습 흐름"),
+        ("이번 주 교안의", "이 장의"),
+        ("이번 주 교안", "본 장"),
+        ("이번 주 내내", "이 장 전체에서"),
+        ("이번 주차에는", "이 장에서는"),
+        ("이번 주차에", "이 장에서"),
+        ("이번 주차의", "이 장의"),
+        ("이번 주차는", "이 장은"),
+        ("이번 주차를", "이 장을"),
+        ("이번 주차", "이 장"),
+        ("이번 주에는", "이 장에서는"),
+        ("이번주에는", "이 장에서는"),
+        ("이번 주에", "이 장에서"),
+        ("이번주에", "이 장에서"),
+        ("이번 주의", "이 장의"),
+        ("이번주의", "이 장의"),
+        ("이번 주는", "이 장은"),
+        ("이번 주를", "이 장을"),
+        ("이번 주로", "이 장으로"),
+        ("이번 주:", "이 장:"),
+        ("이번 주", "이 장"),
+        ("다음 주차에는", "다음 장에서는"),
+        ("다음 주차에", "다음 장에서"),
+        ("다음 주차의", "다음 장의"),
+        ("다음 주차", "다음 장"),
+        ("다음 주에는", "다음 장에서는"),
+        ("다음주에는", "다음 장에서는"),
+        ("다음 주에", "다음 장에서"),
+        ("다음주에", "다음 장에서"),
+        ("다음 주의", "다음 장의"),
+        ("다음 주를", "다음 장을"),
+        ("다음 주", "다음 장"),
+        ("다음주", "다음 장"),
+        ("지난 주차들에서", "앞선 장들에서"),
+        ("지난 주차들의", "앞선 장들의"),
+        ("지난 주차에서", "앞선 장에서"),
+        ("지난 주차의", "앞선 장의"),
+        ("지난 주차", "앞선 장"),
+        ("지난 주에는", "앞선 장에서는"),
+        ("지난주에는", "앞선 장에서는"),
+        ("지난 주에", "앞선 장에서"),
+        ("지난주에", "앞선 장에서"),
+        ("지난 주의", "앞선 장의"),
+        ("지난주의", "앞선 장의"),
+        ("지난 주와", "앞선 장과"),
+        ("지난주와", "앞선 장과"),
+        ("지난 주", "앞선 장"),
+        ("지난주", "앞선 장"),
+        ("주차별", "장별"),
+        ("매 주차", "각 장"),
+        ("전 주차", "전 장"),
+        ("각 주차", "각 장"),
+        ("해당 주차", "해당 장"),
+        ("이전 주차", "이전 장"),
+    ]
+    for old, new in phrase_replacements:
+        md_text = md_text.replace(old, new)
+
+    # 8. Catch any remaining standalone '주차' with proper batchim conjugation
+    md_text = re.sub(
+        r'주차(가|를|는|와|로|다(?=[.\s,:;!?)]|$))?',
+        lambda m: conjugate_jucha_suffix("장", m.group(1) or ""),
+        md_text
+    )
+
+    return md_text
+
+
+def sanitize_markdown_for_vitepress(md_text: str, ch_num: int, is_researcher: bool = False) -> str:
+    """
+    Cleans up markdown edge cases so VitePress (Vue 3 + markdown-it-mathjax3 + Mermaid) compiles cleanly.
+    """
+    # 0. Remove stray zero-width spaces
     md_text = md_text.replace("\u200b", "")
 
     # 1. Fix malformed ![alt](<img ... src="URL" />
@@ -310,10 +524,9 @@ def sanitize_markdown_for_vitepress(md_text: str, week_num: int, is_researcher: 
         md_text
     )
 
-    # 2. Map local /home/leeyb/t2s/assets/... to VitePress public path (relative to site root or relative path)
-    # Note: In VitePress, paths starting with /assets/... in markdown are resolved from docs/public/assets/...
+    # 2. Map local /home/leeyb/t2s/assets/... to VitePress public path
     md_text = md_text.replace("/home/leeyb/t2s/assets/week04/", "/assets/week04/")
-    if week_num == 4:
+    if ch_num == 3:
         md_text = md_text.replace("(./assets/roofline.png)", "(/assets/week04/roofline.png)")
 
     # 3. Map mbsong's relative assets and links to his GitHub repo so they work on the web
@@ -322,10 +535,9 @@ def sanitize_markdown_for_vitepress(md_text: str, week_num: int, is_researcher: 
     md_text = md_text.replace("(./assets/tpu-chip.png)", "(https://raw.githubusercontent.com/Jake-Song/tensor2silicon/main/week3/assets/tpu-chip.png)")
     md_text = md_text.replace("(./assets/pointwise-product.gif)", "(https://raw.githubusercontent.com/Jake-Song/tensor2silicon/main/week3/assets/pointwise-product.gif)")
 
-    # Map mbsong's relative links in week07/week06/week05/week04/week03
     md_text = re.sub(
-        r'\]\(\.\./week(\d+)/[^\)]*\)',
-        lambda m: f'](/week0{m.group(1)}/)',
+        r'\]\(\.\./week0?([2-7])(?:/[^\)]*)?\)',
+        lambda m: f'](/ch0{int(m.group(1)) - 1}/)',
         md_text
     )
     md_text = re.sub(
@@ -339,7 +551,7 @@ def sanitize_markdown_for_vitepress(md_text: str, week_num: int, is_researcher: 
         md_text
     )
 
-    # 4. Handle missing Notion local images in jaehyeong.md (including nested link inside alt text like ![[url](url)](image%204.png))
+    # 4. Handle missing Notion local images in jaehyeong.md
     md_text = re.sub(
         r'!\[\[([^\]]+)\]\(([^)]+)\)\]\(([^)]+)\)',
         r'> 🖼️ *[도식 출처: [\1](\2)]*',
@@ -351,7 +563,6 @@ def sanitize_markdown_for_vitepress(md_text: str, week_num: int, is_researcher: 
         url = match.group(2).strip()
         if url.startswith(("http://", "https://", "/assets/", "/decks/")):
             return match.group(0)
-        # Missing local image from Notion export
         clean_alt = alt if alt and alt != "image.png" else "원본 노션 첨부 도식"
         return f'> 🖼️ *[도식 참고: {clean_alt}]*'
 
@@ -363,12 +574,11 @@ def sanitize_markdown_for_vitepress(md_text: str, week_num: int, is_researcher: 
     in_fence = False
     fence_marker = ""
 
-    # Valid HTML tags we allow in markdown
     allowed_html_tags = {
         "div", "span", "p", "br", "hr", "img", "a", "b", "i", "strong", "em",
         "code", "pre", "blockquote", "ul", "ol", "li", "table", "thead", "tbody",
         "tr", "th", "td", "details", "summary", "sup", "sub", "kbd", "mark",
-        "h1", "h2", "h3", "h4", "h5", "h6", "section", "article", "iframe",
+        "h1", "h2", "h3", "h4", "h5", "h6", "section", "article", "iframe", "small",
         "WeekNavBar", "HtmlDeckViewer", "RooflineCalculator", "IrPipelineViewer",
         "TldrMapCard", "MicroCheckpoint", "FeynmanPassport", "ConceptMatchQuest"
     }
@@ -389,30 +599,21 @@ def sanitize_markdown_for_vitepress(md_text: str, week_num: int, is_researcher: 
             out_lines.append(line)
             continue
 
-        # Outside fenced code block: split by inline code (`...`) and math ($...$) so we only sanitize plain text
-        # Wait: let's split by inline backticks `...` first
         parts = re.split(r'(`+[^`]+`+)', line)
         for idx in range(0, len(parts), 2):
             segment = parts[idx]
-            # Escape {{ and }} if outside math, or even inside math if Vue complains?
-            # Actually in MathJax3, `\frac{a}{b}` is fine, `\frac{{a}}{{b}}` has `{{` which Vue template compiler may try to interpolate if mathjax doesn't consume it or if it's in text!
-            # Putting a space `{ {` in LaTeX is 100% identical in MathJax and completely prevents Vue interpolation!
             segment = segment.replace("{{", "{ {").replace("}}", "} }")
 
-            # Also check for `<something>` that is not a valid HTML tag or HTML comment
             def fix_angle_brackets(m):
                 full = m.group(0)
                 inner = m.group(1)
-                # Check if comment
                 if inner.startswith("!--"):
                     return full
-                # Extract tag name
                 tag_match = re.match(r'^/?([a-zA-Z0-9_-]+)', inner.strip())
                 if tag_match:
                     tag_name = tag_match.group(1)
                     if tag_name in allowed_html_tags or tag_name.lower() in allowed_html_tags:
                         return full
-                # Otherwise escape < and >
                 return "&lt;" + inner + "&gt;"
 
             segment = re.sub(r'<([^<>]+)>', fix_angle_brackets, segment)
@@ -424,10 +625,6 @@ def sanitize_markdown_for_vitepress(md_text: str, week_num: int, is_researcher: 
 
 
 def wrap_solutions_in_details(md_text: str) -> str:
-    """
-    Finds the '해답과 해설' or '연습문제 해답' section in a lecture note / reference file
-    and wraps its body inside a collapsible <details class="t2s-solution-toggle"> block!
-    """
     pattern = re.compile(
         r'^(##\s+(?:\d+\.\s*)?(?:해답과 해설|연습문제 해답[^\n]*|해답 및 해설[^\n]*))\n(.*?)(?=^##\s+|\Z)',
         re.MULTILINE | re.DOTALL
@@ -447,19 +644,18 @@ def wrap_solutions_in_details(md_text: str) -> str:
     return pattern.sub(repl, md_text)
 
 
-def build_week_nav_bar_tag(week_num: int) -> str:
-    meta = WEEKS_META[week_num]
+def build_chapter_nav_bar_tag(ch_num: int) -> str:
+    meta = CHAPTERS_META[ch_num]
     researchers_list = [
         {"id": r["id"], "name": r["name"].split(" ")[0], "label": r["name"], "badge": r["badge"]}
         for r in meta["researchers"]
     ]
-    import json
     r_json = json.dumps(researchers_list, ensure_ascii=False).replace('"', "'")
-    return f'<WeekNavBar :week="{week_num}" topic="{meta["title"]}" :researchers="{r_json}" />\n\n'
+    return f'<WeekNavBar :chapter="{ch_num}" topic="{meta["title"]}" :researchers="{r_json}" />\n\n'
 
 
-def build_researcher_synthesis_section(week_num: int) -> str:
-    meta = WEEKS_META[week_num]
+def build_researcher_synthesis_section(ch_num: int) -> str:
+    meta = CHAPTERS_META[ch_num]
     cards = []
     for r in meta["researchers"]:
         cards.append(
@@ -471,33 +667,29 @@ def build_researcher_synthesis_section(week_num: int) -> str:
             f'      </div>\n'
             f'      <p>{r["summary"]}</p>\n'
             f'    </div>\n'
-            f'    <a class="t2s-synthesis-link" href="./researchers/{r["id"]}">원문 노트 & 실측 분석 읽기 →</a>\n'
+            f'    <a class="t2s-synthesis-link" href="./researchers/{r["id"]}">심화 노트 &amp; 실측 분석 읽기 →</a>\n'
             f'  </div>'
         )
     cards_html = "\n".join(cards)
     return (
-        f"\n## 🔬 이번 주 연구원 리서치 & 실측 하이라이트 (공동 집필 아카이브)\n\n"
-        f"> 본 주차 주제를 랩 연구원들이 각자의 관점과 하드웨어 환경에서 교차 검증·심화 분석한 핵심 요약입니다. 카드를 클릭하면 각 연구원의 전체 리서치 노트로 이동합니다.\n\n"
+        f"\n## 🔬 연구진 심화 분석 & 하드웨어 실측 아카이브\n\n"
+        f"> 이 장의 주제를 연구진이 각자의 하드웨어 환경과 시각에서 교차 검증·심화 분석한 아티클입니다. 카드를 클릭하면 전체 분석 노트로 이동합니다.\n\n"
         f'<div class="t2s-synthesis-grid">\n{cards_html}\n</div>\n\n---\n\n'
     )
 
 
-def insert_before_heading(md_text: str, heading_prefix: str, block: str, week_num: int) -> str:
-    """
-    Strictly inserts `block` right before `\\n{heading_prefix}` and raises an error if not found,
-    guaranteeing no active-learning checkpoint is ever silently dropped.
-    """
+def insert_before_heading(md_text: str, heading_prefix: str, block: str, ch_num: int) -> str:
     target = "\n" + heading_prefix
     if target not in md_text:
-        raise ValueError(f"[Week {week_num}] Heading prefix not found for checkpoint injection: {heading_prefix!r}")
+        raise ValueError(f"[Chapter {ch_num}] Heading prefix not found for checkpoint injection: {heading_prefix!r}")
     return md_text.replace(target, "\n" + block + heading_prefix, 1)
 
 
-def build_tldr_map_card(week_num: int) -> str:
-    if week_num == 2:
+def build_tldr_map_card(ch_num: int) -> str:
+    if ch_num == 1:
         return """
 <TldrMapCard
-  :week="2"
+  :week="1"
   intuition="Python 수식 한 줄(Y = ReLU(X @ W + b))은 곧바로 실리콘 위에서 돌지 않습니다. Eager 모드는 연산마다 커널을 따로 띄워 느린 HBM에 중간 결과를 계속 썼다 읽지만, 컴파일 스택(PyTorch 2 · OpenXLA · MAX)은 전체 연산 그래프(IR)를 먼저 캡처한 뒤 여러 연산을 단일 커널로 합쳐(Fusion) HBM 왕복을 제거합니다."
   :steps="[
     { tag: 'STEP 1 · 1~5절', title: '수식에서 그래프·IR 캡처와 Fusion', desc: '논리적 중간 텐서와 물리적 HBM 버퍼를 구분하고, Eager 실행과 그래프 컴파일러(Fusion)의 차이를 이해합니다.' },
@@ -519,10 +711,10 @@ def build_tldr_map_card(week_num: int) -> str:
 />
 
 """
-    elif week_num == 3:
+    elif ch_num == 2:
         return """
 <TldrMapCard
-  :week="3"
+  :week="2"
   intuition="커널의 실행 시간은 '얼마나 많이 계산하는가(F/P)'와 '얼마나 많이 옮기는가(Q/BW)' 중 더 오래 걸리는 쪽이 지배합니다. Vector Add처럼 원소당 계산이 1번뿐인 커널은 연산기가 아무리 빨라도 HBM 대역폭(BW)에 묶이므로, 여러 커널을 하나로 합쳐(Fusion) 불필요한 HBM 왕복 바이트(Q)를 줄여야 빨라집니다."
   :steps="[
     { tag: 'STEP 1 · 3~6절', title: '연산 시간 vs 메모리 이동 시간', desc: 'FLOPs/s(계산 속도)와 GB/s(대역폭), 메모리 용량과 대역폭을 구분하고 두 시간(T_compute, T_memory) 비교 모델을 세웁니다.' },
@@ -544,10 +736,10 @@ def build_tldr_map_card(week_num: int) -> str:
 />
 
 """
-    elif week_num == 4:
+    elif ch_num == 3:
         return """
 <TldrMapCard
-  :week="4"
+  :week="3"
   intuition="행렬곱의 총 연산 횟수(2N³)는 단 1번도 줄일 수 없지만, 느린 HBM에서 가져온 입력 조각을 빠른 온칩 메모리(Shared Memory·레지스터)에 올려두고 여러 출력 계산에 재사용(Tiling)하면 HBM 왕복량이 1/t로 줄어들어 커널이 수십 배 빨라집니다."
   :steps="[
     { tag: 'STEP 1 · 3~5절', title: '산술 강도와 Roofline 읽기', desc: '1 Byte를 옮길 때 몇 FLOP을 계산하는지(I = F/Q) 구하고, 대역폭 병목과 연산 병목의 경계(분기점 I*)를 찾습니다.' },
@@ -569,10 +761,10 @@ def build_tldr_map_card(week_num: int) -> str:
 />
 
 """
-    elif week_num == 5:
+    elif ch_num == 4:
         return """
 <TldrMapCard
-  :week="5"
+  :week="4"
   intuition="가속기(GPU·TPU·NPU/LPU) 사양표에서 가장 큰 TFLOPs 숫자 하나만 비교하면 반드시 틀립니다. 자료형·희소성(Sparsity) 조건을 맞춘 실효 연산 성능(P)과 메모리 대역폭(BW), 그리고 워크로드의 산술 강도(Prefill vs Decode)를 함께 놓아야 어떤 칩이 실제로 빠른지 판별할 수 있습니다."
   :steps="[
     { tag: 'STEP 1 · 3~5절', title: '아키텍처와 사양표 조건 해독', desc: 'GPU(SIMT)·TPU(Systolic)·NPU의 구조 차이와 사양표 숫자 뒤에 숨은 정밀도·희소성 전제 조건을 해독합니다.' },
@@ -594,10 +786,10 @@ def build_tldr_map_card(week_num: int) -> str:
 />
 
 """
-    elif week_num == 6:
+    elif ch_num == 5:
         return """
 <TldrMapCard
-  :week="6"
+  :week="5"
   intuition="CUDA가 개별 스레드(Thread) 단위로 인덱스를 짠다면, Triton은 1D/2D 블록(타일 벡터) 단위로 메모리를 읽고 온칩 SRAM 안에서 리덕션까지 한 번에 끝냅니다. Softmax 한 행 전체를 블록 하나에 담아 HBM 왕복을 8MN에서 2MN으로 1/4로 줄이는 것이 핵심입니다."
   :steps="[
     { tag: 'STEP 1 · 3~5절', title: '블록 인덱싱과 마스킹 기초', desc: 'program_id와 tl.arange로 포인터 블록을 만들고, 경계 밖 원소를 mask로 안전하게 처리하는 법을 익힙니다.' },
@@ -619,11 +811,11 @@ def build_tldr_map_card(week_num: int) -> str:
 />
 
 """
-    elif week_num == 7:
+    elif ch_num == 6:
         return """
 <TldrMapCard
-  :week="7"
-  intuition="4주차에 손으로 유도한 2D 타일 재사용 수식은 Triton에서 단 10줄의 K축 포인터 전진 루프로 구현됩니다. 여기에 블록 실행 순서(Grouped Ordering)로 L2 캐시 적중률을 높이고, 컴파일러가 TTIR → TTGIR → PTX → SASS 단계를 거치며 비동기 복사(cp.async)와 Tensor Core(mma.sync) 기계어로 변환합니다."
+  :week="6"
+  intuition="3장에서 손으로 유도한 2D 타일 재사용 수식은 Triton에서 단 10줄의 K축 포인터 전진 루프로 구현됩니다. 여기에 블록 실행 순서(Grouped Ordering)로 L2 캐시 적중률을 높이고, 컴파일러가 TTIR → TTGIR → PTX → SASS 단계를 거치며 비동기 복사(cp.async)와 Tensor Core(mma.sync) 기계어로 변환합니다."
   :steps="[
     { tag: 'STEP 1 · 3~4절', title: '2D 포인터 블록과 L2 Grouped Ordering', desc: '브로드캐스팅으로 2D 타일 주소를 만들고, 프로그램 실행 순서 재배치만으로 L2 캐시 재사용을 높이는 원리를 배웁니다.' },
     { tag: 'STEP 2 · 5~6절', title: 'Autotune과 다중 버퍼 SRAM 손계산', desc: '타일 후보별 산술 강도(Roofline)와 파이프라인 스테이지(num_stages)에 따른 Shared Memory 용량 한계를 직접 계산합니다.' },
@@ -647,10 +839,10 @@ def build_tldr_map_card(week_num: int) -> str:
     return ""
 
 
-def inject_week02_active_learning(md_text: str) -> str:
+def inject_ch01_active_learning(md_text: str) -> str:
     cp1 = """
 <MicroCheckpoint
-  :week="2"
+  :week="1"
   checkpointId="cp1-check"
   mode="choice"
   badge="CHECKPOINT 1 · 2~5절 핵심 개념 점검 (Eager vs Fusion)"
@@ -678,7 +870,7 @@ def inject_week02_active_learning(md_text: str) -> str:
 """
     cp2 = """
 <MicroCheckpoint
-  :week="2"
+  :week="1"
   checkpointId="cp2-predict"
   mode="choice"
   badge="CHECKPOINT 2 · 6절 비동기 실행 함정 진단 (Spot-the-Bug)"
@@ -701,7 +893,7 @@ def inject_week02_active_learning(md_text: str) -> str:
 """
     cp3 = """
 <MicroCheckpoint
-  :week="2"
+  :week="1"
   checkpointId="cp3-calc"
   mode="number"
   badge="CHECKPOINT 3 · Epilogue Fusion 중간 버퍼 이동량 계산"
@@ -720,7 +912,7 @@ def inject_week02_active_learning(md_text: str) -> str:
 ## 🖥️ 실습 검증: 실행 스택 매칭 미션 & 인터랙티브 슬라이드 (Checkpoint 4)
 
 <ConceptMatchQuest
-  :week="2"
+  :week="1"
   checkpointId="cp4-quest"
   badge="CHECKPOINT 4 · 5대 실행 스택 역할 매칭 미션"
   title="방금 비교한 실행 스택 구성 요소와 핵심 역할을 바르게 연결해 보세요!"
@@ -751,20 +943,20 @@ def inject_week02_active_learning(md_text: str) -> str:
 
 ### 🎞️ 인터랙티브 실행 스택 아키텍처 & 슬라이드 덱 (`injokim`)
 
-> 2주차 연구원(`injokim`)이 제작한 인터랙티브 학습 노트와 `torch.compile` 내부 구조 슬라이드 덱입니다. 직접 탭을 클릭하거나 **전체화면**으로 열람해 보세요.
+> 연구진(`injokim`)이 제작한 인터랙티브 학습 노트와 `torch.compile` 내부 구조 슬라이드 덱입니다. 직접 탭을 클릭하거나 **전체화면**으로 열람해 보세요.
 
 <HtmlDeckViewer src="/decks/injokim-week02.html" title="PyTorch · OpenXLA · Modular MAX 실행 스택 인터랙티브 노트" author="injokim (김인조)" :height="560" />
 
-<HtmlDeckViewer src="/decks/torch-compile-anatomy-deck.html" title="torch.compile 내부 구조 해부 (Dynamo → AOTAutograd → Inductor)" author="T2S Lab" :height="560" />
+<HtmlDeckViewer src="/decks/torch-compile-anatomy-deck.html" title="torch.compile 내부 구조 해부 (Dynamo → AOTAutograd → Inductor)" author="Tensor2Silicon" :height="560" />
 
 ---
 
 """
     cp5 = """
-## 🏅 Week 02 완독 점검 & 인증 패스포트 (Checkpoint 5)
+## 🏅 Chapter 01 완독 점검 & 인증 패스포트 (Checkpoint 5)
 
 <FeynmanPassport
-  :week="2"
+  :week="1"
   weekTitle="모델에서 실리콘까지 — AI 실행 스택 5대 계층 해부"
   checkpointId="cp5-feynman"
   :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
@@ -779,18 +971,18 @@ def inject_week02_active_learning(md_text: str) -> str:
 ---
 
 """
-    md_text = insert_before_heading(md_text, "## 6. 실행 요청에서 커널 실행으로: 런타임과 비동기성", cp1, 2)
-    md_text = insert_before_heading(md_text, "## 7. 커널에서 칩 내부로: GPU와 TPU", cp2, 2)
-    md_text = insert_before_heading(md_text, "## 8. PyTorch 경로와 예제", cp3, 2)
-    md_text = insert_before_heading(md_text, "## 13. 작게 해볼 수 있는 관찰 실험", cp4, 2)
-    md_text = insert_before_heading(md_text, "## 15. 용어 사전과 최종 요약", cp5, 2)
+    md_text = insert_before_heading(md_text, "## 6. 실행 요청에서 커널 실행으로: 런타임과 비동기성", cp1, 1)
+    md_text = insert_before_heading(md_text, "## 7. 커널에서 칩 내부로: GPU와 TPU", cp2, 1)
+    md_text = insert_before_heading(md_text, "## 8. PyTorch 경로와 예제", cp3, 1)
+    md_text = insert_before_heading(md_text, "## 13. 작게 해볼 수 있는 관찰 실험", cp4, 1)
+    md_text = insert_before_heading(md_text, "## 15. 용어 사전과 최종 요약", cp5, 1)
     return md_text
 
 
-def inject_week03_active_learning(md_text: str) -> str:
+def inject_ch02_active_learning(md_text: str) -> str:
     cp1 = """
 <MicroCheckpoint
-  :week="3"
+  :week="2"
   checkpointId="cp1-check"
   mode="choice"
   badge="CHECKPOINT 1 · 4~6절 오개념 함정 진단 (O/X)"
@@ -813,7 +1005,7 @@ def inject_week03_active_learning(md_text: str) -> str:
 """
     cp2 = """
 <MicroCheckpoint
-  :week="3"
+  :week="2"
   checkpointId="cp2-predict"
   mode="choice"
   badge="CHECKPOINT 2 · 8절 읽기 전 결과 예측 (Predict-Before-Read)"
@@ -841,7 +1033,7 @@ def inject_week03_active_learning(md_text: str) -> str:
 """
     cp3 = """
 <MicroCheckpoint
-  :week="3"
+  :week="2"
   checkpointId="cp3-calc"
   mode="number"
   badge="CHECKPOINT 3 · 8절 Kernel Fusion 속도 향상 배수 검증"
@@ -859,18 +1051,18 @@ def inject_week03_active_learning(md_text: str) -> str:
     cp4 = """
 ## 🎛️ 실습 검증: 메모리 병목에서 연산 병목으로 탈출하기 (Checkpoint 4)
 
-> 원소별 연산(Vector Add)은 아무리 묶어도 한 번 읽은 데이터로 계산을 몇 번밖에 하지 못하지만, 다음 주차로 이어지는 **행렬곱(MatMul)** 은 온칩 메모리에 올린 타일 크기를 키울수록 데이터 재사용이 늘어 **어느 순간 메모리 대역폭 병목에서 연산 병목으로 전환**됩니다. 아래 시뮬레이터에서 직접 타일 크기를 눌러 그 전환 지점을 찾아보세요!
+> 원소별 연산(Vector Add)은 아무리 묶어도 한 번 읽은 데이터로 계산을 몇 번밖에 하지 못하지만, 다음 3장으로 이어지는 **행렬곱(MatMul)** 은 온칩 메모리에 올린 타일 크기를 키울수록 데이터 재사용이 늘어 **어느 순간 메모리 대역폭 병목에서 연산 병목으로 전환**됩니다. 아래 시뮬레이터에서 직접 타일 크기를 눌러 그 전환 지점을 찾아보세요!
 
-<RooflineCalculator :week="3" checkpointId="cp4-quest" questType="week03" />
+<RooflineCalculator :week="2" checkpointId="cp4-quest" questType="ch02" />
 
 ---
 
 """
     cp5 = """
-## 🏅 Week 03 완독 점검 & 인증 패스포트 (Checkpoint 5)
+## 🏅 Chapter 02 완독 점검 & 인증 패스포트 (Checkpoint 5)
 
 <FeynmanPassport
-  :week="3"
+  :week="2"
   weekTitle="커널의 시간은 어디에서 소비되는가 — 연산 시간 vs 메모리 이동 시간"
   checkpointId="cp5-feynman"
   :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
@@ -885,18 +1077,18 @@ def inject_week03_active_learning(md_text: str) -> str:
 ---
 
 """
-    md_text = insert_before_heading(md_text, "## 7. 계산 예제 1 — Vector Add의 시간", cp1, 3)
-    md_text = insert_before_heading(md_text, "## 8. 계산 예제 2 — 커널을 합치면 무엇이 달라질까", cp2, 3)
-    md_text = insert_before_heading(md_text, "## 9. 병목을 해석하고 개선 방향 고르기", cp3, 3)
-    md_text = insert_before_heading(md_text, "## 10. 코드에서 읽기와 계산과 쓰기 찾기", cp4, 3)
-    md_text = insert_before_heading(md_text, "## 16. 스터디 발표와 용어 정리", cp5, 3)
+    md_text = insert_before_heading(md_text, "## 7. 계산 예제 1 — Vector Add의 시간", cp1, 2)
+    md_text = insert_before_heading(md_text, "## 8. 계산 예제 2 — 커널을 합치면 무엇이 달라질까", cp2, 2)
+    md_text = insert_before_heading(md_text, "## 9. 병목을 해석하고 개선 방향 고르기", cp3, 2)
+    md_text = insert_before_heading(md_text, "## 10. 코드에서 읽기와 계산과 쓰기 찾기", cp4, 2)
+    md_text = insert_before_heading(md_text, "## 16. 스터디 발표와 용어 정리", cp5, 2)
     return md_text
 
 
-def inject_week04_active_learning(md_text: str) -> str:
+def inject_ch03_active_learning(md_text: str) -> str:
     cp1_and_cp2 = """
 <MicroCheckpoint
-  :week="4"
+  :week="3"
   checkpointId="cp1-roofline"
   mode="choice"
   badge="CHECKPOINT 1 · 3~5절 오개념 함정 진단 (O/X)"
@@ -917,7 +1109,7 @@ def inject_week04_active_learning(md_text: str) -> str:
 />
 
 <MicroCheckpoint
-  :week="4"
+  :week="3"
   checkpointId="cp2-predict"
   mode="choice"
   badge="CHECKPOINT 2 · 6절 읽기 전 결과 예측 (Predict-Before-Read)"
@@ -945,7 +1137,7 @@ def inject_week04_active_learning(md_text: str) -> str:
 """
     cp3_calc = """
 <MicroCheckpoint
-  :week="4"
+  :week="3"
   checkpointId="cp3-calc"
   mode="number"
   badge="CHECKPOINT 3 · 8절 손계산 1단계 변형 검증"
@@ -965,9 +1157,9 @@ def inject_week04_active_learning(md_text: str) -> str:
 
 > 방금 10~11절에서 배운 **핵심 원리** — *"출력 타일(`BM×BN`)은 산술 강도를 결정하고, K 방향 폭(`BK`)과 파이프라인 단계는 온칩 Shared Memory 사용량을 좌우한다"* — 를 아래 시뮬레이터에서 직접 손으로 조작해 증명해 보세요!
 
-<RooflineCalculator :week="4" checkpointId="cp4-quest" questType="week04" />
+<RooflineCalculator :week="3" checkpointId="cp4-quest" questType="ch03" />
 
-### 📊 4주차 핵심 시각화 도표 모음
+### 📊 제3장 핵심 시각화 도표 모음
 
 | Roofline 성능 상한과 재사용 조건 | 4×4 행렬곱의 2×2 출력 타일 누적 과정 |
 | :---: | :---: |
@@ -988,10 +1180,10 @@ def inject_week04_active_learning(md_text: str) -> str:
 
 """
     cp5_passport = """
-## 🏅 Week 04 완독 점검 & 인증 패스포트 (Checkpoint 5)
+## 🏅 Chapter 03 완독 점검 & 인증 패스포트 (Checkpoint 5)
 
 <FeynmanPassport
-  :week="4"
+  :week="3"
   weekTitle="Roofline과 Tiling — 산술 강도와 온칩 데이터 재사용"
   checkpointId="cp5-feynman"
   :allCheckpointIds="['cp1-roofline', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
@@ -1006,17 +1198,17 @@ def inject_week04_active_learning(md_text: str) -> str:
 ---
 
 """
-    md_text = insert_before_heading(md_text, "## 6. Tiling은 무엇을 나누고 무엇을 유지할까", cp1_and_cp2, 4)
-    md_text = insert_before_heading(md_text, "## 9. 재사용 가정이 달라지면 산술 강도도 달라진다", cp3_calc, 4)
-    md_text = insert_before_heading(md_text, "## 12. 선택 활동", cp4_simulator_quest, 4)
-    md_text = insert_before_heading(md_text, "## 16. 스터디에서 설명하고 함께 점검하기", cp5_passport, 4)
+    md_text = insert_before_heading(md_text, "## 6. Tiling은 무엇을 나누고 무엇을 유지할까", cp1_and_cp2, 3)
+    md_text = insert_before_heading(md_text, "## 9. 재사용 가정이 달라지면 산술 강도도 달라진다", cp3_calc, 3)
+    md_text = insert_before_heading(md_text, "## 12. 선택 활동", cp4_simulator_quest, 3)
+    md_text = insert_before_heading(md_text, "## 16. 스터디에서 설명하고 함께 점검하기", cp5_passport, 3)
     return md_text
 
 
-def inject_week05_active_learning(md_text: str) -> str:
+def inject_ch04_active_learning(md_text: str) -> str:
     cp1 = """
 <MicroCheckpoint
-  :week="5"
+  :week="4"
   checkpointId="cp1-check"
   mode="choice"
   badge="CHECKPOINT 1 · 3~4절 사양표 함정 진단 (O/X)"
@@ -1039,7 +1231,7 @@ def inject_week05_active_learning(md_text: str) -> str:
 """
     cp2 = """
 <MicroCheckpoint
-  :week="5"
+  :week="4"
   checkpointId="cp2-predict"
   mode="choice"
   badge="CHECKPOINT 2 · 7절 읽기 전 승자 예측 (Predict-Before-Read)"
@@ -1067,7 +1259,7 @@ def inject_week05_active_learning(md_text: str) -> str:
 """
     cp3 = """
 <MicroCheckpoint
-  :week="5"
+  :week="4"
   checkpointId="cp3-calc"
   mode="number"
   badge="CHECKPOINT 3 · 7절 작업 2(연산 집약) 실행 시간 검증"
@@ -1086,7 +1278,7 @@ def inject_week05_active_learning(md_text: str) -> str:
 ## 🧩 실습 검증: xPU 아키텍처 & LLM 워크로드 매칭 미션 (Checkpoint 4)
 
 <ConceptMatchQuest
-  :week="5"
+  :week="4"
   checkpointId="cp4-quest"
   badge="CHECKPOINT 4 · xPU 구조 & LLM 지표 연결 미션"
   title="가속기 아키텍처와 LLM 추론 단계별 병목 특성을 바르게 연결해 보세요!"
@@ -1119,10 +1311,10 @@ def inject_week05_active_learning(md_text: str) -> str:
 
 """
     cp5 = """
-## 🏅 Week 05 완독 점검 & 인증 패스포트 (Checkpoint 5)
+## 🏅 Chapter 04 완독 점검 & 인증 패스포트 (Checkpoint 5)
 
 <FeynmanPassport
-  :week="5"
+  :week="4"
   weekTitle="xPU를 어떻게 비교할 것인가 — 아키텍처·사양표·워크로드 비교 기준"
   checkpointId="cp5-feynman"
   :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
@@ -1137,18 +1329,18 @@ def inject_week05_active_learning(md_text: str) -> str:
 ---
 
 """
-    md_text = insert_before_heading(md_text, "## 5. 소프트웨어와 실행 경로 — 같은 모델이 가속기까지 내려가는 과정", cp1, 5)
-    md_text = insert_before_heading(md_text, "## 7. 계산 예제 1 — 연산 성능이 더 큰 장치가 항상 빠를까", cp2, 5)
-    md_text = insert_before_heading(md_text, "## 8. 계산 예제 2 — 장치 연산이 빠르면 전체 응답도 빠를까", cp3, 5)
-    md_text = insert_before_heading(md_text, "## 10. 장비 없이 참여하기 — 무료 실습 환경, 해석기, 시뮬레이터", cp4, 5)
-    md_text = insert_before_heading(md_text, "## 15. 스터디에서 설명하고 함께 점검하기", cp5, 5)
+    md_text = insert_before_heading(md_text, "## 5. 소프트웨어와 실행 경로 — 같은 모델이 가속기까지 내려가는 과정", cp1, 4)
+    md_text = insert_before_heading(md_text, "## 7. 계산 예제 1 — 연산 성능이 더 큰 장치가 항상 빠를까", cp2, 4)
+    md_text = insert_before_heading(md_text, "## 8. 계산 예제 2 — 장치 연산이 빠르면 전체 응답도 빠를까", cp3, 4)
+    md_text = insert_before_heading(md_text, "## 10. 장비 없이 참여하기 — 무료 실습 환경, 해석기, 시뮬레이터", cp4, 4)
+    md_text = insert_before_heading(md_text, "## 15. 스터디에서 설명하고 함께 점검하기", cp5, 4)
     return md_text
 
 
-def inject_week06_active_learning(md_text: str) -> str:
+def inject_ch05_active_learning(md_text: str) -> str:
     cp1 = """
 <MicroCheckpoint
-  :week="6"
+  :week="5"
   checkpointId="cp1-check"
   mode="choice"
   badge="CHECKPOINT 1 · 3~5절 오개념 함정 진단 (O/X)"
@@ -1171,7 +1363,7 @@ def inject_week06_active_learning(md_text: str) -> str:
 """
     cp2 = """
 <MicroCheckpoint
-  :week="6"
+  :week="5"
   checkpointId="cp2-predict"
   mode="choice"
   badge="CHECKPOINT 2 · 7절 읽기 전 버그 예측 (Spot-the-Bug)"
@@ -1194,7 +1386,7 @@ def inject_week06_active_learning(md_text: str) -> str:
 """
     cp3 = """
 <MicroCheckpoint
-  :week="6"
+  :week="5"
   checkpointId="cp3-calc"
   mode="number"
   badge="CHECKPOINT 3 · 6~8절 Fused Softmax 데이터 이동 감소 배수"
@@ -1213,7 +1405,7 @@ def inject_week06_active_learning(md_text: str) -> str:
 ## 🧩 실습 검증: Triton 블록 커널 핵심 구문 매칭 미션 (Checkpoint 4)
 
 <ConceptMatchQuest
-  :week="6"
+  :week="5"
   checkpointId="cp4-quest"
   badge="CHECKPOINT 4 · Triton 핵심 API & 동작 매칭 미션"
   title="Fused Softmax 커널을 구성하는 4가지 Triton 구문과 역할을 연결해 보세요!"
@@ -1243,7 +1435,7 @@ def inject_week06_active_learning(md_text: str) -> str:
 />
 
 <details class="t2s-solution-toggle">
-<summary>🔍 미리 보기: 방금 작성한 Triton 커널이 7주차에서 GPU 기계어(PTX/SASS)로 컴파일되는 과정 펼쳐보기</summary>
+<summary>🔍 미리 보기: 방금 작성한 Triton 커널이 다음 6장에서 GPU 기계어(PTX/SASS)로 컴파일되는 과정 펼쳐보기</summary>
 
 <IrPipelineViewer />
 
@@ -1253,10 +1445,10 @@ def inject_week06_active_learning(md_text: str) -> str:
 
 """
     cp5 = """
-## 🏅 Week 06 완독 점검 & 인증 패스포트 (Checkpoint 5)
+## 🏅 Chapter 05 완독 점검 & 인증 패스포트 (Checkpoint 5)
 
 <FeynmanPassport
-  :week="6"
+  :week="5"
   weekTitle="Python에서 Triton 커널로 — 블록 프로그래밍과 Fused Softmax"
   checkpointId="cp5-feynman"
   :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
@@ -1271,18 +1463,18 @@ def inject_week06_active_learning(md_text: str) -> str:
 ---
 
 """
-    md_text = insert_before_heading(md_text, "## 6. 커널 결합과 HBM 왕복 — Softmax에서 차이가 커지는 이유", cp1, 6)
-    md_text = insert_before_heading(md_text, "## 7. 행 단위 리덕션과 패딩값 — 한 행을 블록 하나에 담기", cp2, 6)
-    md_text = insert_before_heading(md_text, "## 8. 공동 활동 — 블록 인덱싱과 Fused Softmax의 데이터 이동 비교", cp3, 6)
-    md_text = insert_before_heading(md_text, "## 9. 정확도 검증과 벤치마크 — 무엇을 확인하고 어느 시간을 잴까", cp4, 6)
-    md_text = insert_before_heading(md_text, "## 15. 스터디에서 설명하고 함께 점검하기", cp5, 6)
+    md_text = insert_before_heading(md_text, "## 6. 커널 결합과 HBM 왕복 — Softmax에서 차이가 커지는 이유", cp1, 5)
+    md_text = insert_before_heading(md_text, "## 7. 행 단위 리덕션과 패딩값 — 한 행을 블록 하나에 담기", cp2, 5)
+    md_text = insert_before_heading(md_text, "## 8. 공동 활동 — 블록 인덱싱과 Fused Softmax의 데이터 이동 비교", cp3, 5)
+    md_text = insert_before_heading(md_text, "## 9. 정확도 검증과 벤치마크 — 무엇을 확인하고 어느 시간을 잴까", cp4, 5)
+    md_text = insert_before_heading(md_text, "## 15. 스터디에서 설명하고 함께 점검하기", cp5, 5)
     return md_text
 
 
-def inject_week07_active_learning(md_text: str) -> str:
+def inject_ch06_active_learning(md_text: str) -> str:
     cp1 = """
 <MicroCheckpoint
-  :week="7"
+  :week="6"
   checkpointId="cp1-check"
   mode="choice"
   badge="CHECKPOINT 1 · 3~4절 오개념 함정 진단 (O/X)"
@@ -1305,7 +1497,7 @@ def inject_week07_active_learning(md_text: str) -> str:
 """
     cp2 = """
 <MicroCheckpoint
-  :week="7"
+  :week="6"
   checkpointId="cp2-predict"
   mode="choice"
   badge="CHECKPOINT 2 · 6절 읽기 전 결과 예측 (Predict-Before-Read)"
@@ -1328,12 +1520,12 @@ def inject_week07_active_learning(md_text: str) -> str:
 """
     cp3 = """
 <MicroCheckpoint
-  :week="7"
+  :week="6"
   checkpointId="cp3-calc"
   mode="number"
   badge="CHECKPOINT 3 · 6절 다중 스테이지 Shared Memory 용량 계산"
   title="후보 2(128×128, BK=32, FP16)에서 num_stages=4일 때 파이프라인 버퍼 크기는 몇 KiB일까?"
-  question="6.2절 후보 2(BM = 128, BN = 128, BK = 32, FP16 = 2 Byte)에서 1단계 입력 타일 크기는 A 타일(128×32×2B = 8 KiB) + B 타일(32×128×2B = 8 KiB) = 총 16 KiB였습니다. 비동기 복사와 연산을 겹치기 위해 소프트웨어 파이프라이닝 단계 수를 num_stages = 4로 설정할 때(교안 식 S_pipe = num_stages × S_1stage 기준), 필요한 파이프라인 타일 버퍼 용량은 몇 KiB인가요?"
+  question="6.2절 후보 2(BM = 128, BN = 128, BK = 32, FP16 = 2 Byte)에서 1단계 입력 타일 크기는 A 타일(128×32×2B = 8 KiB) + B 타일(32×128×2B = 8 KiB) = 총 16 KiB였습니다. 비동기 복사와 연산을 겹치기 위해 소프트웨어 파이프라이닝 단계 수를 num_stages = 4로 설정할 때(본문 식 S_pipe = num_stages × S_1stage 기준), 필요한 파이프라인 타일 버퍼 용량은 몇 KiB인가요?"
   :expectedAnswer="64"
   :tolerance="0.1"
   unit="KiB"
@@ -1348,7 +1540,7 @@ def inject_week07_active_learning(md_text: str) -> str:
 
 > 방금 7~8절에서 배운 Triton 컴파일 파이프라인(`Python` → `TTIR` → `TTGIR` → `LLVM IR` → `PTX` → `SASS`)의 실제 산출물을 아래 탐색기에서 직접 클릭해 비교하고 **탐정 미션**을 통과해 보세요! 이어지는 Roofline 계산기에서는 A100·RTX 5090 프리셋도 자유롭게 실험할 수 있습니다.
 
-<IrPipelineViewer :week="7" checkpointId="cp4-quest" />
+<IrPipelineViewer :week="6" checkpointId="cp4-quest" />
 
 <RooflineCalculator />
 
@@ -1356,10 +1548,10 @@ def inject_week07_active_learning(md_text: str) -> str:
 
 """
     cp5 = """
-## 🏅 Week 07 완독 점검 & 인증 패스포트 (Checkpoint 5)
+## 🏅 Chapter 06 완독 점검 & 인증 패스포트 (Checkpoint 5)
 
 <FeynmanPassport
-  :week="7"
+  :week="6"
   weekTitle="Tiled MatMul과 컴파일 과정 — 2D 타일 재사용에서 GPU 기계어까지"
   checkpointId="cp5-feynman"
   :allCheckpointIds="['cp1-check', 'cp2-predict', 'cp3-calc', 'cp4-quest', 'cp5-feynman']"
@@ -1374,33 +1566,165 @@ def inject_week07_active_learning(md_text: str) -> str:
 ---
 
 """
-    md_text = insert_before_heading(md_text, "## 5. 메타파라미터와 자동 튜닝", cp1, 7)
-    md_text = insert_before_heading(md_text, "## 6. 계산 예제 2", cp2, 7)
-    md_text = insert_before_heading(md_text, "## 7. Triton 컴파일 파이프라인과 IR 계층", cp3, 7)
-    md_text = insert_before_heading(md_text, "## 9. 공동 활동 정리", cp4, 7)
-    md_text = insert_before_heading(md_text, "## 14. 스터디에서 설명하고 함께 점검하기", cp5, 7)
+    md_text = insert_before_heading(md_text, "## 5. 메타파라미터와 자동 튜닝", cp1, 6)
+    md_text = insert_before_heading(md_text, "## 6. 계산 예제 2", cp2, 6)
+    md_text = insert_before_heading(md_text, "## 7. Triton 컴파일 파이프라인과 IR 계층", cp3, 6)
+    md_text = insert_before_heading(md_text, "## 9. 공동 활동 정리", cp4, 6)
+    md_text = insert_before_heading(md_text, "## 14. 스터디에서 설명하고 함께 점검하기", cp5, 6)
     return md_text
 
 
-def inject_active_learning(week_num: int, md_text: str) -> str:
-    if week_num == 2:
-        return inject_week02_active_learning(md_text)
-    elif week_num == 3:
-        return inject_week03_active_learning(md_text)
-    elif week_num == 4:
-        return inject_week04_active_learning(md_text)
-    elif week_num == 5:
-        return inject_week05_active_learning(md_text)
-    elif week_num == 6:
-        return inject_week06_active_learning(md_text)
-    elif week_num == 7:
-        return inject_week07_active_learning(md_text)
+def inject_active_learning(ch_num: int, md_text: str) -> str:
+    if ch_num == 1:
+        return inject_ch01_active_learning(md_text)
+    elif ch_num == 2:
+        return inject_ch02_active_learning(md_text)
+    elif ch_num == 3:
+        return inject_ch03_active_learning(md_text)
+    elif ch_num == 4:
+        return inject_ch04_active_learning(md_text)
+    elif ch_num == 5:
+        return inject_ch05_active_learning(md_text)
+    elif ch_num == 6:
+        return inject_ch06_active_learning(md_text)
     return md_text
+
+
+def build_overview_markdown() -> str:
+    """
+    Generates a polished, self-contained Book Preface & Architecture Overview (docs/intro/overview.md)
+    representing the completed 6-chapter edition without any 'in progress' or weekly schedule language.
+    """
+    return """<div align="center">
+
+<img src="https://resources-public-prd.modulabs.co.kr/home-section/asset-lab/ccdb66da-1c92-477a-becf-723348c577d5.png" alt="Tensor2Silicon Banner" width="100%" style="border-radius: 12px; margin-bottom: 16px;" />
+
+# 🚀 Tensor2Silicon: AI 모델에서 가속기 커널까지
+### **From Tensor to Silicon — 실행 스택·Roofline·타일링·다단계 IR 완전 해부**
+
+[![ModuLabs LAB](https://img.shields.io/badge/ModuLabs-LAB%20%23811-F7585C?style=for-the-badge&logoColor=white)](https://modulabs.co.kr/labs/811)
+[![Organization](https://img.shields.io/badge/Org-Legato%20User%20Group-24292F?style=for-the-badge&logo=github)](https://github.com/legato-user-group)
+[![MSIT / IITP](https://img.shields.io/badge/Supported%20by-MSIT%20%26%20IITP%20(K--Cloud)-004EA2?style=for-the-badge)](https://www.iitp.kr)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://github.com/legato-user-group/tensor2silicon-lab/blob/main/LICENSE)
+[![Edition](https://img.shields.io/badge/Edition-Complete%206--Chapter%20WebBook-10b981?style=for-the-badge)](../ch01/)
+
+<p align="center">
+  <b>#Tensor</b> · <b>#Kernel</b> · <b>#AI_Accelerator</b> · <b>#Roofline</b> · <b>#Tiling</b> · <b>#Triton</b> · <b>#MLIR</b> · <b>#xPU</b> · <b>#Legato_IR</b>
+</p>
+
+</div>
+
+---
+
+## 📖 이 책에 대하여 (About This Book)
+
+**『Tensor2Silicon: AI 모델에서 가속기 커널까지』**는 PyTorch·Transformer 수식 한 줄이 **연산 그래프(IR) → 컴파일러 최적화 → 비동기 런타임 → 온칩 메모리 계층과 가속기 실리콘 명령어(`PTX`/`SASS`)**에 도달하기까지의 전 과정을 하나의 일관된 관점으로 연결한 기술 웹북입니다.
+
+상위 딥러닝 프레임워크에는 익숙하지만 컴파일러와 하드웨어 시스템 내부가 블랙박스처럼 느껴졌던 엔지니어와 연구자를 위해, **이영빈(`Youngbin Lee · yblee`)** 대표 저자가 전체 6장 본문과 정량 계산 체계를 집필하고 5인의 공동 연구진이 실제 GPU·TPU 환경에서 교차 검증 및 하드웨어 실측 아티클을 더했습니다.
+
+- 🧮 **정량적 손계산과 시뮬레이션 중심**: 추상적인 비유에 머물지 않고 `FLOPs`, HBM 데이터 이동량(`Q`), 산술 강도($I = F/Q$), 온칩 Shared Memory 파이프라인 용량을 직접 손으로 계산하고 내장 시뮬레이터로 즉시 검증합니다.
+- 💻 **실행 스택 비교에서 커널 구현·기계어 해부까지**: PyTorch(`torch.compile`), JAX(`OpenXLA`), Modular `MAX`의 거시적 비교에서 출발해, Triton 1D/2D 커널 구현과 `TTIR → TTGIR → LLVM IR → PTX → SASS` 다단계 하향 변환까지 직접 내려갑니다.
+- 🎯 **5단계 능동 학습(Active Learning) 설계**: 모든 장마다 3분 핵심 지도, 오개념 O/X 진단, 결과 예측, 손계산 빈칸, 인터랙티브 실습 미션, 파인만 한 줄 설명 인증서가 내장되어 있어 읽은 내용을 자기 지식으로 완전히 체화할 수 있습니다.
+- 🌐 **개방형 AI 반도체 시스템 SW 생태계 토대**: 본 저작물은 **과학기술정보통신부**와 **정보통신기획평가원(IITP)**의 지원을 받아 수행되는 **「AI반도체를 활용한 K-클라우드 기술개발 사업」** 오픈소스 커뮤니티 프로그램([모두의연구소 T2S Lab](https://modulabs.co.kr/labs/811))의 결실로 제작되었으며, 이기종 AI 가속기를 위한 개방형 저수준 IR(**Legato**) 생태계의 기술적 토대를 함께 제시합니다.
+
+---
+
+## 🔄 핵심 관통 프레임워크: AI 실행 스택 5대 계층
+
+이 책 전체(1장 ~ 6장)가 일관되게 파헤치는 **모델에서 실리콘까지의 5대 실행 계층**입니다.
+
+```mermaid
+flowchart LR
+    A["📐 1. 모델 & 수식<br/>(Transformer, MatMul)"] --> B["🕸️ 2. 그래프 & IR<br/>(FX, StableHLO, TTIR)"]
+    B --> C["⚙️ 3. 컴파일러<br/>(Fusion, Tiling, TTGIR)"]
+    C --> D["🚀 4. 런타임<br/>(Buffer, Stream, Launch)"]
+    D --> E["⚡ 5. 가속기 & 실리콘<br/>(HBM/SRAM, GPU·TPU·NPU)"]
+```
+
+| 계층 (Layer) | 핵심 질문 | 주요 입력 | 주요 출력 | 집중 탐구 장 |
+| :--- | :--- | :--- | :--- | :---: |
+| **1. 모델·텐서 연산** | 무엇을 계산할까? | 모델 정의, 입력, 가중치 | 텐서 연산의 수학적 의미와 형상(`shape`) | **Chapter 01** |
+| **2. 그래프·IR** | 기계가 분석하기 좋은 형태로 어떻게 표현할까? | 프로그램, `shape`, `dtype` | 연산 그래프 및 다단계 중간 표현(IR) | **Chapter 01 · 06** |
+| **3. 컴파일러** | 이 계산을 대상 하드웨어에서 어떻게 최적화할까? | IR, 타겟 하드웨어 명세 | 커널 결합(Fusion), 타일링, 비동기 파이프라인 | **Chapter 01 · 05 · 06** |
+| **4. 런타임** | 지금 어떤 데이터로 언제 실행하고 어떻게 측정할까? | 실행 바이너리, 디바이스 버퍼 | 비동기 스트림 디스패치, 동기화, 실효 벤치마크 | **Chapter 01 · 04 · 05** |
+| **5. 칩 내부 (Silicon)** | 데이터를 어디서 가져와 어떤 유닛에서 계산할까? | 기계어(`SASS`), 메모리 주소 | HBM↔SRAM 재사용, Roofline 상한, SIMT/Systolic | **Chapter 02 · 03 · 04 · 06** |
+
+---
+
+## 📚 전 6장 완결 구성 (Book Contents)
+
+| 장 (Chapter) | 제목 및 핵심 주제 | 다루는 핵심 질문과 역량 | 바로가기 |
+| :---: | :--- | :--- | :---: |
+| **Chapter 01** | **모델에서 실리콘까지** | 연산 하나가 가속기 실리콘에 도달하기까지 거치는 5대 계층과 PyTorch 2.0 · OpenXLA · Modular MAX 비교 | [1장 읽기](../ch01/) |
+| **Chapter 02** | **커널의 시간은 어디에서 소비되는가** | 연산 시간($F/P$) vs 메모리 이동 시간($Q/\\text{BW}$) 분해 모델, SRAM·HBM 계층, Vector Add와 Kernel Fusion 손계산 | [2장 읽기](../ch02/) |
+| **Chapter 03** | **Roofline과 Tiling** | 산술 강도($I = F/Q$)와 하드웨어 분기점($I^*$), 2D 타일 재사용을 통한 HBM 트래픽 절감 및 온칩 메모리 한계 | [3장 읽기](../ch03/) |
+| **Chapter 04** | **xPU를 어떻게 비교할 것인가** | GPU(SIMT) · TPU(Systolic Array) · NPU/LPU 구조 대조, 사양표 함정 해독, LLM Prefill(TTFT) vs Decode(TPOT) 병목 | [4장 읽기](../ch04/) |
+| **Chapter 05** | **Python에서 Triton 커널로** | 1D 블록 포인터(`tl.arange`)와 경계 마스킹(`-inf`), 온칩 리덕션을 통한 Fused Softmax 구현 및 대역폭 검증 | [5장 읽기](../ch05/) |
+| **Chapter 06** | **Tiled MatMul과 컴파일 과정** | 2D 타일 행렬곱 커널, L2 캐시 Grouped Ordering, Autotune, `TTIR → TTGIR → LLVM IR → PTX → SASS` 실측 해부 | [6장 읽기](../ch06/) |
+
+---
+
+## 🛠️ 집필 및 기술 검증 4대 원칙
+
+1. **핵심 질문 중심 서술 (Question-Driven Architecture)**
+   - 모든 장은 명확한 엔지니어링 질문에서 출발하여 **직관 → 수식 모델 → 손계산 → 실제 코드와 하드웨어 검증** 순서로 답을 도출합니다.
+2. **근거 기반 서술 (Fact-Checked Documentation)**
+   - 공식 컴파일러 문서, 하드웨어 아키텍처 백서, 실제 추출한 IR/어셈블리 산출물을 근거로 삼으며, **확인된 사실(Fact)**과 **성능 모델상의 가정(Assumption)**을 엄격히 구분합니다.
+3. **교차 재현성 검증 (Cross-Verified Reproducibility)**
+   - 모든 수치 예제와 벤치마크 실험은 대표 저자의 본문 모델과 연구진의 다중 GPU(`RTX 4070`, `RTX 5090`, `NVIDIA A100`) 실측을 통해 교차 검증되었습니다.
+4. **능동적 체득 (Active Mastery)**
+   - 눈으로만 읽고 넘어가는 수동적 독서를 지양하고, 독자가 직접 예측·계산·조작·설명하며 스스로 이해도를 증명할 수 있도록 설계했습니다.
+
+---
+
+## 🏦 사사 (Acknowledgments)
+
+본 프로젝트 및 결과물은 **과학기술정보통신부** 및 **정보통신기획평가원(IITP)**의 재원으로 **정보통신·방송 기술개발사업(AI반도체를 활용한 K-클라우드 기술개발 — AI반도체 데이터센터 컴퓨팅 SW)**의 지원을 받아 수행된 연구 결과입니다.
+
+- **과제번호 (Project No.)**: `RS-2026-25521385`
+- **연구개발과제명 (국문)**: 지속적 AI반도체 성능 최적화를 위한 AI 생태계 적응형 시스템SW 기술 개발
+- **Project Title (EN)**: *Development of Adaptive System Software Technology for AI Ecosystems Enabling Continuous Performance Optimization of AI Semiconductors*
+- **연구개발기간 (Period)**: 2026.04.01 ~ 2030.12.31
+- **참여기관 (Consortium)**: ㈜하이퍼엑셀(주관), 서울대학교 산학협력단(공동), 한국과학기술원(공동), 모두의연구소(위탁)
+
+> *This work was supported by the Institute of Information & Communications Technology Planning & Evaluation (IITP) grant funded by the Korea government (MSIT) (No. RS-2026-25521385, Development of Adaptive System Software Technology for AI Ecosystems Enabling Continuous Performance Optimization of AI Semiconductors).*
+
+---
+
+## 📄 라이선스 (License)
+
+이 웹북의 모든 문서와 예제 코드는 [Apache License 2.0](https://github.com/legato-user-group/tensor2silicon-lab/blob/main/LICENSE) 라이선스 하에 공개되어 있습니다.
+"""
 
 
 def generate_all():
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
     (DOCS_DIR / "intro").mkdir(parents=True, exist_ok=True)
+
+    # Remove legacy week02 ~ week07 markdown folders so VitePress search only indexes Chapter 01 ~ 06
+    for old_w in range(2, 8):
+        old_dir = DOCS_DIR / f"week0{old_w}"
+        if old_dir.exists():
+            shutil.rmtree(old_dir)
+        # Create lightweight redirect HTML in docs/public/week0X/index.html -> ../ch0{old_w-1}/
+        pub_redirect_dir = DOCS_DIR / "public" / f"week0{old_w}"
+        pub_redirect_dir.mkdir(parents=True, exist_ok=True)
+        target_ch = old_w - 1
+        redirect_html = (
+            "<!DOCTYPE html>\n"
+            '<html lang="ko">\n'
+            "<head>\n"
+            '  <meta charset="utf-8" />\n'
+            f'  <meta http-equiv="refresh" content="0; url=../ch0{target_ch}/" />\n'
+            f"  <script>location.replace('../ch0{target_ch}/' + location.hash);</script>\n"
+            f"  <title>Redirecting to Chapter 0{target_ch}...</title>\n"
+            "</head>\n"
+            "<body>\n"
+            f'  <p>이동 중입니다: <a href="../ch0{target_ch}/">Chapter 0{target_ch} 바로가기</a></p>\n'
+            "</body>\n"
+            "</html>\n"
+        )
+        (pub_redirect_dir / "index.html").write_text(redirect_html, encoding="utf-8")
 
     author_byline_main = (
         '<div class="t2s-author-byline">\n'
@@ -1408,8 +1732,8 @@ def generate_all():
         '    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />\n'
         '    <div class="t2s-author-meta">\n'
         '      <div class="t2s-author-title-row">\n'
-        '        <span>✍️ <strong>메인 교안 집필 &amp; 커리큘럼 설계: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>\n'
-        '        <span class="t2s-author-role-badge">🧭 T2S Lab 랩장 · Lead Author</span>\n'
+        '        <span>✍️ <strong>본문 집필 &amp; 커리큘럼 설계: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>\n'
+        '        <span class="t2s-author-role-badge">🧭 대표 저자 · Lead Author</span>\n'
         '      </div>\n'
         '      <div class="t2s-author-affil">모두의연구소 커뮤니티팀 팀장 · Google AI GDE · JAX-KR / GDG Incheon 오거나이저</div>\n'
         '    </div>\n'
@@ -1424,10 +1748,10 @@ def generate_all():
         '    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />\n'
         '    <div class="t2s-author-meta">\n'
         '      <div class="t2s-author-title-row">\n'
-        '        <span>🧭 <strong>주차 학습 안내 &amp; 손계산 예제 집필: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>\n'
+        '        <span>🧭 <strong>단원 핵심 요약 &amp; 손계산 연습 집필: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>\n'
         '        <span class="t2s-author-role-badge">Lead Author</span>\n'
         '      </div>\n'
-        '      <div class="t2s-author-affil">T2S Lab 랩장 · 전 주차 커리큘럼 및 정량 계산 연습문제·해설 설계</div>\n'
+        '      <div class="t2s-author-affil">전체 커리큘럼 설계 및 정량 계산 예제·연습문제·해설 집필</div>\n'
         '    </div>\n'
         '  </div>\n'
         '  <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>\n'
@@ -1439,33 +1763,33 @@ def generate_all():
 layout: home
 
 hero:
-  name: "Tensor2Silicon LAB"
+  name: "Tensor2Silicon"
   text: "AI 모델에서 가속기 커널까지"
-  tagline: "PyTorch·Transformer 수식 한 줄이 그래프(IR), 컴파일러, 런타임을 거쳐 GPU·TPU·NPU 실리콘 위에서 실행되기까지의 전 과정을 정량적 손계산·능동 학습 퀘스트·커널 실습으로 체득하는 오픈 리서치 웹북 (메인 교안 집필: 이영빈 · yblee)"
+  tagline: "PyTorch·Transformer 수식 한 줄이 그래프(IR), 컴파일러, 런타임을 거쳐 GPU·TPU·NPU 실리콘 명령어에 도달하기까지의 전 과정을 정량적 손계산·능동 학습 퀘스트·커널 실습으로 완주하는 기술 웹북 (집필: 이영빈 · yblee)"
   actions:
     - theme: brand
-      text: "📖 웹북 읽기 시작하기 (랩 소개)"
+      text: "🚀 Chapter 01부터 읽기 시작하기"
+      link: /ch01/
+    - theme: alt
+      text: "📖 책 소개 & 5대 계층 아키텍처"
       link: /intro/overview
     - theme: alt
-      text: "🚀 2주차: 모델에서 실리콘까지"
-      link: /week02/
-    - theme: alt
-      text: "🔥 7주차: Tiled MatMul & IR 해부"
-      link: /week07/
+      text: "🔥 Chapter 06: Tiled MatMul & IR 해부"
+      link: /ch06/
 
 features:
   - icon: 🎯
-    title: "전 주차 5단계 능동 학습 & 완독 패스포트"
-    details: "단순히 눈으로만 읽고 지나치지 않도록 매 주차 3분 직관 지도, 오개념 O/X, 손계산 빈칸, 인터랙티브 실습 미션, 파인만 한줄설명 인증서를 제공합니다."
+    title: "전 6장 5단계 능동 학습 & 완독 패스포트"
+    details: "단순히 눈으로만 읽고 지나치지 않도록 모든 장마다 3분 핵심 지도, 오개념 O/X, 손계산 빈칸, 인터랙티브 실습 미션, 파인만 한줄설명 인증서를 제공합니다."
   - icon: 🧮
     title: "정량적 손계산 & 인터랙티브 시뮬레이터"
-    details: "FLOPs, HBM 메모리 이동량(Q), 산술 강도(I = F/Q), Shared Memory 타일 버퍼 크기를 손으로 직접 계산하고 웹북 내장 Roofline·IR 탐색기로 즉시 실험합니다."
+    details: "FLOPs, HBM 데이터 이동량(Q), 산술 강도(I = F/Q), Shared Memory 타일 버퍼 크기를 손으로 직접 계산하고 웹북 내장 Roofline·IR 탐색기로 즉시 실험합니다."
   - icon: ⚙️
     title: "다단계 컴파일러 & IR 실측 해부"
     details: "PyTorch(torch.compile), JAX(OpenXLA), Modular MAX, 그리고 Triton 커널이 TTIR → TTGIR → LLVM IR → PTX → SASS로 구체화되는 과정을 A100 및 RTX 5090 실측 데이터로 검증합니다."
   - icon: ✍️
-    title: "이영빈(yblee) 집필 메인 교안 + 연구원 실측"
-    details: "랩장 이영빈(yblee)이 전 주차 직접 설계·집필한 체계적인 메인 교과서를 중심으로, 5인의 연구원이 각자의 하드웨어에서 교차 검증한 심화 리포트를 함께 열람합니다."
+    title: "이영빈(yblee) 본문 집필 + 연구진 하드웨어 실측"
+    details: "대표 저자 이영빈(yblee)이 설계·집필한 전 6장 메인 교과서를 중심축으로, 5인의 연구진이 각자의 하드웨어에서 교차 검증한 심화 노트를 함께 수록했습니다."
 ---
 
 <div class="t2s-lead-author-card">
@@ -1473,60 +1797,54 @@ features:
     <img class="t2s-lead-author-avatar-lg" src="https://github.com/yblee110.png" alt="이영빈 (Youngbin Lee)" />
     <div class="t2s-lead-author-info">
       <h3>
-        <span>✍️ 메인 교안 대표 저자: 이영빈 (Youngbin Lee · <code>yblee</code>)</span>
-        <span class="t2s-author-role-badge">🧭 T2S Lab 랩장 · Lead Author</span>
+        <span>✍️ 대표 저자: 이영빈 (Youngbin Lee · <code>yblee</code>)</span>
+        <span class="t2s-author-role-badge">🧭 커리큘럼 설계 · 전 6장 본문 집필</span>
       </h3>
       <p>
-        본 웹북의 전체 8주 커리큘럼 아키텍처 설계와 <strong>전 주차(Week 02 ~ Week 07) 메인 교안, 학습 안내, 정량적 손계산 예제 및 연습문제·해설을 직접 집필</strong>했습니다.<br/>
+        본 웹북의 아키텍처 설계와 <strong>전 6장(Chapter 01 ~ Chapter 06) 본문 교안, 단원 요약, 정량적 손계산 예제 및 연습문제·해설을 직접 집필</strong>했습니다.<br/>
         <small>모두의연구소 커뮤니티팀 팀장 (위탁연구개발기관 책임자) · Google AI GDE · JAX-KR / GDG Incheon 오거나이저</small>
       </p>
     </div>
   </div>
   <div class="t2s-lead-author-actions">
     <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
-    <a class="t2s-author-gh-btn" href="./intro/contributors">전체 저자 &amp; 연구원 소개 →</a>
+    <a class="t2s-author-gh-btn" href="./intro/contributors">저자 &amp; 연구진 소개 →</a>
   </div>
 </div>
 
-## 🗺️ 커리큘럼 한눈에 바로가기 (Curriculum Roadmap)
+## 📚 전체 목차 한눈에 보기 (Complete 6-Chapter Edition)
 
-| 주차 | 주제 (Topic) · 메인 교안 집필: 이영빈 (`yblee`) | 능동 학습 퀘스트 & 인터랙티브 도구 (`5/5` 마스터리) | 바로가기 |
+| 장 (Chapter) | 제목 · 본문 집필: 이영빈 (`yblee`) | 능동 학습 퀘스트 & 인터랙티브 도구 (`5/5` 마스터리) | 바로가기 |
 | :---: | :--- | :--- | :---: |
-| **Intro** | **랩 소개 & 5대 실행 스택** | T2S Lab 운영 원칙, 5대 계층 아키텍처, 저자 & 연구원 아카이브 | [소개 보기](./intro/overview) |
-| **Week 02** | **모델에서 실리콘까지** | 실행 스택 역할 매칭 미션 + Epilogue Fusion 손계산 + **인터랙티브 HTML 슬라이드 덱** | [2주차 열기](./week02/) |
-| **Week 03** | **커널의 시간은 어디에서 소비되는가** | 용량 vs 대역폭 진단 + Fusion 속도 배수 계산 + **병목 전환 타일 탐색 미션** | [3주차 열기](./week03/) |
-| **Week 04** | **Roofline과 Tiling** | 산술 강도($I = F/Q$) 예측 + 타일 읽기량 손계산 + **Roofline & SRAM 제약 돌파 미션** | [4주차 열기](./week04/) |
-| **Week 05** | **xPU를 어떻게 비교할 것인가** | 스펙시트 Sparsity 함정 진단 + 장치 역전 손계산 + **GPU·TPU & Prefill·Decode 매칭** | [5주차 열기](./week05/) |
-| **Week 06** | **Python에서 Triton 커널로** | `-inf` 패딩 버그 찾기 + Fused Softmax `4x` 절감 계산 + **Triton 핵심 구문 매칭** | [6주차 열기](./week06/) |
-| **Week 07** | **Tiled MatMul과 컴파일 과정** | L2 그룹핑 진단 + 파이프라인 SRAM 계산 + **다단계 IR(`TTIR→SASS`) 탐정 미션** | [7주차 열기](./week07/) |
+| **Preface** | **책 소개 & 5대 실행 스택** | 집필 원칙, 모델→실리콘 5대 계층 아키텍처, 저자 & 연구진 아카이브 | [서문 보기](./intro/overview) |
+| **Chapter 01** | **모델에서 실리콘까지** | 실행 스택 역할 매칭 미션 + Epilogue Fusion 손계산 + **인터랙티브 HTML 슬라이드 덱** | [1장 열기](./ch01/) |
+| **Chapter 02** | **커널의 시간은 어디에서 소비되는가** | 용량 vs 대역폭 진단 + Fusion 속도 배수 계산 + **병목 전환 타일 탐색 미션** | [2장 열기](./ch02/) |
+| **Chapter 03** | **Roofline과 Tiling** | 산술 강도($I = F/Q$) 예측 + 타일 읽기량 손계산 + **Roofline & SRAM 제약 돌파 미션** | [3장 열기](./ch03/) |
+| **Chapter 04** | **xPU를 어떻게 비교할 것인가** | 스펙시트 Sparsity 함정 진단 + 장치 역전 손계산 + **GPU·TPU & Prefill·Decode 매칭** | [4장 열기](./ch04/) |
+| **Chapter 05** | **Python에서 Triton 커널로** | `-inf` 패딩 버그 찾기 + Fused Softmax `4x` 절감 계산 + **Triton 핵심 구문 매칭** | [5장 열기](./ch05/) |
+| **Chapter 06** | **Tiled MatMul과 컴파일 과정** | L2 그룹핑 진단 + 파이프라인 SRAM 계산 + **다단계 IR(`TTIR→SASS`) 탐정 미션** | [6장 열기](./ch06/) |
 """
     (DOCS_DIR / "index.md").write_text(index_md, encoding="utf-8")
 
-    # 2. Build Overview Page (docs/intro/overview.md) from README.md
-    readme_raw = (REPO_DIR / "README.md").read_text(encoding="utf-8")
-    # Clean up links in README so `./week02` -> `../week02/`
-    readme_cleaned = readme_raw.replace("(./week02)", "(/week02/)")
-    readme_cleaned = readme_cleaned.replace("(./week03)", "(/week03/)")
-    readme_cleaned = readme_cleaned.replace("(./week04)", "(/week04/)")
-    readme_cleaned = readme_cleaned.replace("(./LICENSE)", "(https://github.com/legato-user-group/tensor2silicon-lab/blob/main/LICENSE)")
-    readme_cleaned = sanitize_markdown_for_vitepress(readme_cleaned, week_num=1)
-    (DOCS_DIR / "intro" / "overview.md").write_text(readme_cleaned, encoding="utf-8")
+    # 2. Build Overview / Preface Page (docs/intro/overview.md)
+    overview_md = build_overview_markdown()
+    (DOCS_DIR / "intro" / "overview.md").write_text(overview_md, encoding="utf-8")
 
-    # 3. Build Contributors Archive Matrix (docs/intro/contributors.md)
+    # 3. Build Authors & Researchers Archive Matrix (docs/intro/contributors.md)
     contrib_lines = [
-        "# ✍️ 대표 저자 & 연구원 아카이브\n",
-        "**Tensor2Silicon LAB** 웹북은 **랩장 이영빈(`yblee`)이 직접 설계·집필한 전 주차 메인 교과서 및 정량 계산 예제**를 중심축으로, 랩 연구원들이 매주 하드웨어 실측·다이어그램·교차 검증 리포트를 더해 완성한 오픈 리서치 웹북입니다.\n",
-        "## ✍️ 메인 교안 대표 저자 & 커리큘럼 총괄 (Lead Author)\n",
+        "# ✍️ 대표 저자 & 연구진 소개\n",
+        "**『Tensor2Silicon: AI 모델에서 가속기 커널까지』**는 **대표 저자 이영빈(`yblee`)이 직접 설계·집필한 전 6장 본문 교과서 및 정량 계산 연습**을 중심축으로, 5인의 연구진이 하드웨어 실측·다이어그램·교차 검증 아티클을 더해 완성한 기술 웹북입니다.\n",
+        "## ✍️ 대표 저자 & 커리큘럼 총괄 (Lead Author)\n",
         '<div class="t2s-lead-author-card">\n'
         '  <div class="t2s-lead-author-left">\n'
         '    <img class="t2s-lead-author-avatar-lg" src="https://github.com/yblee110.png" alt="이영빈 (Youngbin Lee)" />\n'
         '    <div class="t2s-lead-author-info">\n'
         '      <h3>\n'
         '        <span>이영빈 (Youngbin Lee · <code>yblee</code>)</span>\n'
-        '        <span class="t2s-author-role-badge">🧭 T2S Lab 랩장 · 메인 교안 단독 집필</span>\n'
+        '        <span class="t2s-author-role-badge">🧭 대표 저자 · 전 6장 본문 단독 집필</span>\n'
         '      </h3>\n'
         '      <p>\n'
-        '        <strong>담당 역할:</strong> 전체 커리큘럼 설계, 전 주차(<code>Week 02 ~ Week 07</code>) 메인 교안 집필, 주차별 학습 안내문 및 참고 계산 예제·연습문제·해설 집필<br/>\n'
+        '        <strong>집필 범위:</strong> 전체 6장 커리큘럼 설계, <code>Chapter 01 ~ Chapter 06</code> 본문 교안 단독 집필, 단원별 핵심 요약 및 정량 계산 예제·연습문제·해설 집필<br/>\n'
         '        <strong>소속 및 활동:</strong> 모두의연구소 커뮤니티팀 팀장 (위탁연구개발기관 책임자) · Google AI GDE · JAX-KR 오거나이저 · GDG Incheon 오거나이저\n'
         '      </p>\n'
         '    </div>\n'
@@ -1535,8 +1853,8 @@ features:
         '    <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>\n'
         '  </div>\n'
         '</div>\n',
-        "## 🧑‍🔬 공동 검증 & 심화 리서치 연구원 (Lab Researchers)\n",
-        "| 프로필 | 이름 (핸들) | 주요 연구 기여 및 실측 분야 | GitHub |",
+        "## 🧑‍🔬 공동 검증 & 심화 리서치 연구진 (Contributing Researchers)\n",
+        "| 프로필 | 이름 (핸들) | 주요 연구 기여 및 하드웨어 실측 분야 | GitHub |",
         "| :---: | :--- | :--- | :---: |",
         "| <img src=\"https://github.com/Jake-Song.png\" width=\"56\" style=\"border-radius:50%\" /> | **송무복 (`mbsong`)** | 🔬 A100 실측 IR 아티팩트 구축 · GPU/TPU 아키텍처 심층 비교 | [@Jake-Song](https://github.com/Jake-Song) |",
         "| <img src=\"https://github.com/SinGonKim.png\" width=\"56\" style=\"border-radius:50%\" /> | **김신곤 (`singon`)** | 🧮 정량적 손계산 해설 · 아키텍처 시각화 & RTX 4070 실측 | [@SinGonKim](https://github.com/SinGonKim) |",
@@ -1544,19 +1862,18 @@ features:
         "| <img src=\"https://github.com/Kiminjo.png\" width=\"56\" style=\"border-radius:50%\" /> | **김인조 (`injokim`)** | 🖥️ 인터랙티브 HTML 시각화 제작 · 수식 유도 & MLIR 파이프라인 정리 | [@Kiminjo](https://github.com/Kiminjo) |",
         "| <img src=\"https://github.com/eloqlo.png\" width=\"56\" style=\"border-radius:50%\" /> | **이재형 (`jaehyeong`)** | 📐 핵심 개념 요약 · 컴파일 파이프라인 & 타일링 구조 정리 | [@eloqlo](https://github.com/eloqlo) |\n",
         "---\n",
-        "## 📚 주차별 전체 문서 아카이브 매트릭스\n",
-        "| 주차 | ✍️ 메인 교안 (집필: 이영빈) | 🧭 안내·예제 (집필: 이영빈) | `mbsong` | `singon` | `junpark` | `injokim` | `jaehyeong` |",
+        "## 📚 장별 전체 수록 문서 매트릭스 (Chapter Matrix)\n",
+        "| 장 (Chapter) | ✍️ 본문 교안 (집필: 이영빈) | 🧭 요약·연습 (집필: 이영빈) | `mbsong` | `singon` | `junpark` | `injokim` | `jaehyeong` |",
         "| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
     ]
 
-    for w, meta in sorted(WEEKS_META.items()):
-        r_map = {r["id"]: f"[열기](/week0{w}/researchers/{r['id']})" for r in meta["researchers"]}
-        # Normalize kiminjo -> injokim for display column
+    for ch, meta in sorted(CHAPTERS_META.items()):
+        r_map = {r["id"]: f"[열기](/ch0{ch}/researchers/{r['id']})" for r in meta["researchers"]}
         inj_link = r_map.get("injokim") or r_map.get("kiminjo") or "-"
         contrib_lines.append(
-            f"| **Week 0{w}**<br/><small>{meta['title']}</small> "
-            f"| [📘 메인 교안](/week0{w}/) "
-            f"| [🧭 안내/예제](/week0{w}/guide) "
+            f"| **Chapter 0{ch}**<br/><small>{meta['title']}</small> "
+            f"| [📘 본문 읽기](/ch0{ch}/) "
+            f"| [🧭 요약/연습](/ch0{ch}/guide) "
             f"| {r_map.get('mbsong', '-')} "
             f"| {r_map.get('singon', '-')} "
             f"| {r_map.get('junpark', '-')} "
@@ -1566,26 +1883,26 @@ features:
 
     (DOCS_DIR / "intro" / "contributors.md").write_text("\n".join(contrib_lines) + "\n", encoding="utf-8")
 
-    # 4. Build Weekly Chapters (Week 02 ~ Week 07)
-    for w, meta in sorted(WEEKS_META.items()):
-        week_dir = DOCS_DIR / f"week0{w}"
-        res_dir = week_dir / "researchers"
-        week_dir.mkdir(parents=True, exist_ok=True)
+    # 4. Build Chapters (Chapter 01 ~ Chapter 06)
+    for ch, meta in sorted(CHAPTERS_META.items()):
+        ch_dir = DOCS_DIR / f"ch0{ch}"
+        res_dir = ch_dir / "researchers"
+        ch_dir.mkdir(parents=True, exist_ok=True)
         res_dir.mkdir(parents=True, exist_ok=True)
 
-        nav_bar = build_week_nav_bar_tag(w)
-        synthesis_block = build_researcher_synthesis_section(w)
-        tldr_card_block = build_tldr_map_card(w)
+        nav_bar = build_chapter_nav_bar_tag(ch)
+        synthesis_block = build_researcher_synthesis_section(ch)
+        tldr_card_block = build_tldr_map_card(ch)
 
-        # 4a. Main Lecture Note (docs/week0X/index.md)
+        # 4a. Main Chapter (docs/ch0X/index.md)
         main_raw = meta["main_src"].read_text(encoding="utf-8")
-        # Ensure top title starts with # if it started with ##
         if main_raw.lstrip().startswith("## "):
             main_raw = main_raw.lstrip()[1:]
 
         main_processed = wrap_solutions_in_details(main_raw)
-        main_processed = sanitize_markdown_for_vitepress(main_processed, week_num=w, is_researcher=False)
-        main_processed = inject_active_learning(w, main_processed)
+        main_processed = sanitize_markdown_for_vitepress(main_processed, ch_num=ch, is_researcher=False)
+        main_processed = inject_active_learning(ch, main_processed)
+        main_processed = normalize_to_finished_book(main_processed)
 
         # Place Lead Author Byline right under the top `# Title`
         main_processed = re.sub(
@@ -1602,7 +1919,7 @@ features:
                 "\n"
                 + tldr_card_block
                 + '\n<details class="t2s-solution-toggle">\n'
-                + '<summary>📑 전체 절 목록 펼쳐보기 (우측 고정 목차에서도 바로 이동 가능)</summary>\n\n'
+                + '<summary>📑 이 장의 전체 절 목록 펼쳐보기 (우측 고정 목차에서도 바로 이동 가능)</summary>\n\n'
                 + m.group(1).strip()
                 + "\n\n</details>\n\n---\n"
             ),
@@ -1611,7 +1928,7 @@ features:
             flags=re.DOTALL
         )
         if toc_subs != 1:
-            raise ValueError(f"[Week {w}] Expected inline ## 목차 block for TldrMapCard placement, got {toc_subs}")
+            raise ValueError(f"[Chapter {ch}] Expected inline ## 목차 block for TldrMapCard placement, got {toc_subs}")
 
         # Insert synthesis_block right before the first `## 1.`
         insert_match = re.search(r'\n##\s+1\.', main_processed)
@@ -1627,32 +1944,34 @@ features:
         else:
             main_final = nav_bar + synthesis_block + main_processed
 
-        (week_dir / "index.md").write_text(main_final, encoding="utf-8")
+        (ch_dir / "index.md").write_text(main_final, encoding="utf-8")
 
-        # 4b. Guide & Reference Calculation Examples (docs/week0X/guide.md)
+        # 4b. Chapter Summary & Calculation Exercises (docs/ch0X/guide.md)
         guide_parts = [nav_bar, author_byline_guide]
         if meta["guide_src"] and meta["guide_src"].exists():
             g_raw = meta["guide_src"].read_text(encoding="utf-8")
             if g_raw.lstrip().startswith("## "):
                 g_raw = g_raw.lstrip()[1:]
-            guide_parts.append(sanitize_markdown_for_vitepress(g_raw, week_num=w))
+            g_clean = sanitize_markdown_for_vitepress(g_raw, ch_num=ch)
+            guide_parts.append(normalize_to_finished_book(g_clean))
 
         if meta["ref_src"] and meta["ref_src"].exists():
             r_raw = meta["ref_src"].read_text(encoding="utf-8")
             r_raw = wrap_solutions_in_details(r_raw)
-            guide_parts.append("\n\n---\n\n" + sanitize_markdown_for_vitepress(r_raw, week_num=w))
+            r_clean = sanitize_markdown_for_vitepress(r_raw, ch_num=ch)
+            guide_parts.append("\n\n---\n\n" + normalize_to_finished_book(r_clean))
 
-        (week_dir / "guide.md").write_text("\n".join(guide_parts), encoding="utf-8")
+        (ch_dir / "guide.md").write_text("\n".join(guide_parts), encoding="utf-8")
 
-        # 4c. Researcher Notes (docs/week0X/researchers/<id>.md)
+        # 4c. Researcher Deep-Dive Notes (docs/ch0X/researchers/<id>.md)
         for r in meta["researchers"]:
             r_parts = [
                 nav_bar,
-                f'> 🧑‍🔬 **연구원 리서치 노트** — 작성자: **{r["name"]}** (`{r["badge"]}`)\n>\n'
+                f'> 🧑‍🔬 **연구진 심화 분석 노트** — 작성자: **{r["name"]}** (`{r["badge"]}`)\n>\n'
                 f'> 💡 **핵심 기여 요약**: {r["summary"]}\n\n---\n\n'
             ]
             if "html_decks" in r and r["html_decks"]:
-                r_parts.append(f"# {w}주차 인터랙티브 학습 노트 & 슬라이드 덱 ({r['name']})\n\n")
+                r_parts.append(f"# Chapter 0{ch} 인터랙티브 학습 노트 & 슬라이드 덱 ({r['name']})\n\n")
                 for deck in r["html_decks"]:
                     r_parts.append(
                         f"## {deck['title']}\n\n"
@@ -1666,11 +1985,12 @@ features:
                         f_raw = "#" + f_raw.lstrip()
                     if idx > 0:
                         r_parts.append("\n\n---\n\n")
-                    r_parts.append(sanitize_markdown_for_vitepress(f_raw, week_num=w, is_researcher=True))
+                    f_clean = sanitize_markdown_for_vitepress(f_raw, ch_num=ch, is_researcher=True)
+                    r_parts.append(normalize_to_finished_book(f_clean))
 
             (res_dir / f"{r['id']}.md").write_text("".join(r_parts), encoding="utf-8")
 
-    print("Successfully generated all docs pages for T2S WebBook!")
+    print("Successfully generated complete 6-Chapter T2S WebBook (Chapter 01 ~ Chapter 06)!")
 
 
 if __name__ == "__main__":
