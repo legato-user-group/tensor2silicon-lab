@@ -14,6 +14,15 @@ export default withMermaid(
     markdown: {
       math: true,
       lineNumbers: false,
+      anchor: {
+        slugify: (str: string) =>
+          str
+            .trim()
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s-]/gu, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+      },
       languageAlias: {
         cuda: 'cpp',
         mlir: 'cpp',
@@ -54,8 +63,8 @@ export default withMermaid(
           text: 'Chapter 01 · 모델에서 실리콘까지',
           collapsed: false,
           items: [
-            { text: '📘 본문 (실행 스택 해부)', link: '/ch01/' },
-            { text: '🧭 단원 요약 & 학습 가이드', link: '/ch01/guide' },
+            { text: '📘 전체 심화 본문 (실행 스택 해부)', link: '/ch01/' },
+            { text: '⚡ 15분 핵심 압축 교안 (Core Digest)', link: '/ch01/guide' },
             {
               text: '🧑‍🔬 연구진 심화 노트 (5편)',
               collapsed: true,
@@ -73,8 +82,8 @@ export default withMermaid(
           text: 'Chapter 02 · 커널의 시간과 메모리',
           collapsed: false,
           items: [
-            { text: '📘 본문 (연산 vs 메모리 병목)', link: '/ch02/' },
-            { text: '🧭 단원 요약 & 계산 연습', link: '/ch02/guide' },
+            { text: '📘 전체 심화 본문 (연산 vs 메모리 병목)', link: '/ch02/' },
+            { text: '⚡ 15분 핵심 압축 교안 (Core Digest)', link: '/ch02/guide' },
             {
               text: '🧑‍🔬 연구진 심화 노트 (5편)',
               collapsed: true,
@@ -92,8 +101,8 @@ export default withMermaid(
           text: 'Chapter 03 · Roofline과 Tiling',
           collapsed: false,
           items: [
-            { text: '📘 본문 (산술 강도와 타일링)', link: '/ch03/' },
-            { text: '🧭 단원 요약 & 계산 연습', link: '/ch03/guide' },
+            { text: '📘 전체 심화 본문 (산술 강도와 타일링)', link: '/ch03/' },
+            { text: '⚡ 15분 핵심 압축 교안 (Core Digest)', link: '/ch03/guide' },
             {
               text: '🧑‍🔬 연구진 심화 노트 (5편)',
               collapsed: true,
@@ -111,8 +120,8 @@ export default withMermaid(
           text: 'Chapter 04 · xPU를 어떻게 비교할 것인가',
           collapsed: false,
           items: [
-            { text: '📘 본문 (GPU·TPU·NPU 비교)', link: '/ch04/' },
-            { text: '🧭 단원 요약 & 비교 연습', link: '/ch04/guide' },
+            { text: '📘 전체 심화 본문 (GPU·TPU·NPU 비교)', link: '/ch04/' },
+            { text: '⚡ 15분 핵심 압축 교안 (Core Digest)', link: '/ch04/guide' },
             {
               text: '🧑‍🔬 연구진 심화 노트 (3편)',
               collapsed: true,
@@ -128,8 +137,8 @@ export default withMermaid(
           text: 'Chapter 05 · Python에서 Triton 커널로',
           collapsed: false,
           items: [
-            { text: '📘 본문 (1D 블록 & Softmax)', link: '/ch05/' },
-            { text: '🧭 단원 요약 & 학습 가이드', link: '/ch05/guide' },
+            { text: '📘 전체 심화 본문 (1D 블록 & Softmax)', link: '/ch05/' },
+            { text: '⚡ 15분 핵심 압축 교안 (Core Digest)', link: '/ch05/guide' },
             {
               text: '🧑‍🔬 연구진 심화 노트 (5편)',
               collapsed: true,
@@ -147,8 +156,8 @@ export default withMermaid(
           text: 'Chapter 06 · Tiled MatMul과 컴파일 과정',
           collapsed: false,
           items: [
-            { text: '📘 본문 (2D 타일 & 다단계 IR)', link: '/ch06/' },
-            { text: '🧭 단원 요약 & 계산 연습', link: '/ch06/guide' },
+            { text: '📘 전체 심화 본문 (2D 타일 & 다단계 IR)', link: '/ch06/' },
+            { text: '⚡ 15분 핵심 압축 교안 (Core Digest)', link: '/ch06/guide' },
             {
               text: '🧑‍🔬 연구진 심화 노트 (5편)',
               collapsed: true,

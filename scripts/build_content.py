@@ -1748,10 +1748,10 @@ def generate_all():
         '    <img class="t2s-author-avatar" src="https://github.com/yblee110.png" alt="이영빈 (yblee)" />\n'
         '    <div class="t2s-author-meta">\n'
         '      <div class="t2s-author-title-row">\n'
-        '        <span>🧭 <strong>단원 핵심 요약 &amp; 손계산 연습 집필: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>\n'
-        '        <span class="t2s-author-role-badge">Lead Author</span>\n'
+        '        <span>⚡ <strong>15분 핵심 압축 교안 &amp; 손계산 연습 집필: 이영빈 (Youngbin Lee · <code>yblee</code>)</strong></span>\n'
+        '        <span class="t2s-author-role-badge">Core Digest · Lead Author</span>\n'
         '      </div>\n'
-        '      <div class="t2s-author-affil">전체 커리큘럼 설계 및 정량 계산 예제·연습문제·해설 집필</div>\n'
+        '      <div class="t2s-author-affil">전체 커리큘럼 설계 및 심화 본문·핵심 압축 교안·연습문제 집필</div>\n'
         '    </div>\n'
         '  </div>\n'
         '  <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>\n'
@@ -1768,28 +1768,28 @@ hero:
   tagline: "PyTorch·Transformer 수식 한 줄이 그래프(IR), 컴파일러, 런타임을 거쳐 GPU·TPU·NPU 실리콘 명령어에 도달하기까지의 전 과정을 정량적 손계산·능동 학습 퀘스트·커널 실습으로 완주하는 기술 웹북 (집필: 이영빈 · yblee)"
   actions:
     - theme: brand
-      text: "🚀 Chapter 01부터 읽기 시작하기"
+      text: "⚡ Chapter 01 · 15분 핵심 압축본부터 시작"
+      link: /ch01/guide
+    - theme: alt
+      text: "📘 Chapter 01 · 전체 심화 본문 읽기"
       link: /ch01/
     - theme: alt
       text: "📖 책 소개 & 5대 계층 아키텍처"
       link: /intro/overview
-    - theme: alt
-      text: "🔥 Chapter 06: Tiled MatMul & IR 해부"
-      link: /ch06/
 
 features:
+  - icon: ⚡
+    title: "듀얼 트랙: 15분 핵심 압축 교안 + 심화 본문"
+    details: "바쁠 때는 장당 15분 분량의 『핵심 압축 교안(Core Digest)』으로 수식·도표·코드를 빠르게 정복하고, 필요할 때 『전체 심화 본문』의 해당 절로 즉시 점프할 수 있습니다."
   - icon: 🎯
     title: "전 6장 5단계 능동 학습 & 완독 패스포트"
     details: "단순히 눈으로만 읽고 지나치지 않도록 모든 장마다 3분 핵심 지도, 오개념 O/X, 손계산 빈칸, 인터랙티브 실습 미션, 파인만 한줄설명 인증서를 제공합니다."
   - icon: 🧮
     title: "정량적 손계산 & 인터랙티브 시뮬레이터"
     details: "FLOPs, HBM 데이터 이동량(Q), 산술 강도(I = F/Q), Shared Memory 타일 버퍼 크기를 손으로 직접 계산하고 웹북 내장 Roofline·IR 탐색기로 즉시 실험합니다."
-  - icon: ⚙️
-    title: "다단계 컴파일러 & IR 실측 해부"
-    details: "PyTorch(torch.compile), JAX(OpenXLA), Modular MAX, 그리고 Triton 커널이 TTIR → TTGIR → LLVM IR → PTX → SASS로 구체화되는 과정을 A100 및 RTX 5090 실측 데이터로 검증합니다."
   - icon: ✍️
     title: "이영빈(yblee) 본문 집필 + 연구진 하드웨어 실측"
-    details: "대표 저자 이영빈(yblee)이 설계·집필한 전 6장 메인 교과서를 중심축으로, 5인의 연구진이 각자의 하드웨어에서 교차 검증한 심화 노트를 함께 수록했습니다."
+    details: "대표 저자 이영빈(yblee)이 설계·집필한 전 6장 메인 교과서와 압축 교안을 중심축으로, 5인의 연구진이 A100·RTX 5090 등에서 교차 검증한 실측 노트를 함께 수록했습니다."
 ---
 
 <div class="t2s-lead-author-card">
@@ -1801,7 +1801,7 @@ features:
         <span class="t2s-author-role-badge">🧭 커리큘럼 설계 · 전 6장 본문 집필</span>
       </h3>
       <p>
-        본 웹북의 아키텍처 설계와 <strong>전 6장(Chapter 01 ~ Chapter 06) 본문 교안, 단원 요약, 정량적 손계산 예제 및 연습문제·해설을 직접 집필</strong>했습니다.<br/>
+        본 웹북의 아키텍처 설계와 <strong>전 6장(Chapter 01 ~ Chapter 06) 심화 본문, 15분 핵심 압축 교안, 정량적 손계산 예제 및 연습문제·해설을 직접 집필</strong>했습니다.<br/>
         <small>모두의연구소 커뮤니티팀 팀장 (위탁연구개발기관 책임자) · Google AI GDE · JAX-KR / GDG Incheon 오거나이저</small>
       </p>
     </div>
@@ -1814,15 +1814,15 @@ features:
 
 ## 📚 전체 목차 한눈에 보기 (Complete 6-Chapter Edition)
 
-| 장 (Chapter) | 제목 · 본문 집필: 이영빈 (`yblee`) | 능동 학습 퀘스트 & 인터랙티브 도구 (`5/5` 마스터리) | 바로가기 |
+| 장 (Chapter) | 제목 · 본문 집필: 이영빈 (`yblee`) | 능동 학습 퀘스트 & 인터랙티브 도구 (`5/5` 마스터리) | 듀얼 트랙 바로가기 |
 | :---: | :--- | :--- | :---: |
 | **Preface** | **책 소개 & 5대 실행 스택** | 집필 원칙, 모델→실리콘 5대 계층 아키텍처, 저자 & 연구진 아카이브 | [서문 보기](./intro/overview) |
-| **Chapter 01** | **모델에서 실리콘까지** | 실행 스택 역할 매칭 미션 + Epilogue Fusion 손계산 + **인터랙티브 HTML 슬라이드 덱** | [1장 열기](./ch01/) |
-| **Chapter 02** | **커널의 시간은 어디에서 소비되는가** | 용량 vs 대역폭 진단 + Fusion 속도 배수 계산 + **병목 전환 타일 탐색 미션** | [2장 열기](./ch02/) |
-| **Chapter 03** | **Roofline과 Tiling** | 산술 강도($I = F/Q$) 예측 + 타일 읽기량 손계산 + **Roofline & SRAM 제약 돌파 미션** | [3장 열기](./ch03/) |
-| **Chapter 04** | **xPU를 어떻게 비교할 것인가** | 스펙시트 Sparsity 함정 진단 + 장치 역전 손계산 + **GPU·TPU & Prefill·Decode 매칭** | [4장 열기](./ch04/) |
-| **Chapter 05** | **Python에서 Triton 커널로** | `-inf` 패딩 버그 찾기 + Fused Softmax `4x` 절감 계산 + **Triton 핵심 구문 매칭** | [5장 열기](./ch05/) |
-| **Chapter 06** | **Tiled MatMul과 컴파일 과정** | L2 그룹핑 진단 + 파이프라인 SRAM 계산 + **다단계 IR(`TTIR→SASS`) 탐정 미션** | [6장 열기](./ch06/) |
+| **Chapter 01** | **모델에서 실리콘까지** | 실행 스택 역할 매칭 미션 + Epilogue Fusion 손계산 + **인터랙티브 슬라이드 덱** | [⚡ 15분 압축](./ch01/guide) · [📘 심화 본문](./ch01/) |
+| **Chapter 02** | **커널의 시간은 어디에서 소비되는가** | 용량 vs 대역폭 진단 + Fusion 속도 배수 계산 + **병목 전환 타일 탐색 미션** | [⚡ 15분 압축](./ch02/guide) · [📘 심화 본문](./ch02/) |
+| **Chapter 03** | **Roofline과 Tiling** | 산술 강도($I = F/Q$) 예측 + 타일 읽기량 손계산 + **Roofline & SRAM 제약 돌파 미션** | [⚡ 15분 압축](./ch03/guide) · [📘 심화 본문](./ch03/) |
+| **Chapter 04** | **xPU를 어떻게 비교할 것인가** | 스펙시트 Sparsity 함정 진단 + 장치 역전 손계산 + **GPU·TPU & Prefill·Decode 매칭** | [⚡ 15분 압축](./ch04/guide) · [📘 심화 본문](./ch04/) |
+| **Chapter 05** | **Python에서 Triton 커널로** | `-inf` 패딩 버그 찾기 + Fused Softmax `4x` 절감 계산 + **Triton 핵심 구문 매칭** | [⚡ 15분 압축](./ch05/guide) · [📘 심화 본문](./ch05/) |
+| **Chapter 06** | **Tiled MatMul과 컴파일 과정** | L2 그룹핑 진단 + 파이프라인 SRAM 계산 + **다단계 IR(`TTIR→SASS`) 탐정 미션** | [⚡ 15분 압축](./ch06/guide) · [📘 심화 본문](./ch06/) |
 """
     (DOCS_DIR / "index.md").write_text(index_md, encoding="utf-8")
 
@@ -1833,7 +1833,7 @@ features:
     # 3. Build Authors & Researchers Archive Matrix (docs/intro/contributors.md)
     contrib_lines = [
         "# ✍️ 대표 저자 & 연구진 소개\n",
-        "**『Tensor2Silicon: AI 모델에서 가속기 커널까지』**는 **대표 저자 이영빈(`yblee`)이 직접 설계·집필한 전 6장 본문 교과서 및 정량 계산 연습**을 중심축으로, 5인의 연구진이 하드웨어 실측·다이어그램·교차 검증 아티클을 더해 완성한 기술 웹북입니다.\n",
+        "**『Tensor2Silicon: AI 모델에서 가속기 커널까지』**는 **대표 저자 이영빈(`yblee`)이 직접 설계·집필한 전 6장 심화 본문 및 15분 핵심 압축 교안**을 중심축으로, 5인의 연구진이 하드웨어 실측·다이어그램·교차 검증 아티클을 더해 완성한 기술 웹북입니다.\n",
         "## ✍️ 대표 저자 & 커리큘럼 총괄 (Lead Author)\n",
         '<div class="t2s-lead-author-card">\n'
         '  <div class="t2s-lead-author-left">\n'
@@ -1841,10 +1841,10 @@ features:
         '    <div class="t2s-lead-author-info">\n'
         '      <h3>\n'
         '        <span>이영빈 (Youngbin Lee · <code>yblee</code>)</span>\n'
-        '        <span class="t2s-author-role-badge">🧭 대표 저자 · 전 6장 본문 단독 집필</span>\n'
+        '        <span class="t2s-author-role-badge">🧭 대표 저자 · 전 6장 본문 &amp; 압축 교안 단독 집필</span>\n'
         '      </h3>\n'
         '      <p>\n'
-        '        <strong>집필 범위:</strong> 전체 6장 커리큘럼 설계, <code>Chapter 01 ~ Chapter 06</code> 본문 교안 단독 집필, 단원별 핵심 요약 및 정량 계산 예제·연습문제·해설 집필<br/>\n'
+        '        <strong>집필 범위:</strong> 전체 6장 커리큘럼 설계, <code>Chapter 01 ~ Chapter 06</code> 전체 심화 본문 및 15분 핵심 압축 교안(Core Digest) 단독 집필, 정량 계산 예제·연습문제·해설 집필<br/>\n'
         '        <strong>소속 및 활동:</strong> 모두의연구소 커뮤니티팀 팀장 (위탁연구개발기관 책임자) · Google AI GDE · JAX-KR 오거나이저 · GDG Incheon 오거나이저\n'
         '      </p>\n'
         '    </div>\n'
@@ -1863,7 +1863,7 @@ features:
         "| <img src=\"https://github.com/eloqlo.png\" width=\"56\" style=\"border-radius:50%\" /> | **이재형 (`jaehyeong`)** | 📐 핵심 개념 요약 · 컴파일 파이프라인 & 타일링 구조 정리 | [@eloqlo](https://github.com/eloqlo) |\n",
         "---\n",
         "## 📚 장별 전체 수록 문서 매트릭스 (Chapter Matrix)\n",
-        "| 장 (Chapter) | ✍️ 본문 교안 (집필: 이영빈) | 🧭 요약·연습 (집필: 이영빈) | `mbsong` | `singon` | `junpark` | `injokim` | `jaehyeong` |",
+        "| 장 (Chapter) | 📘 심화 본문 (이영빈) | ⚡ 15분 압축 교안 (이영빈) | `mbsong` | `singon` | `junpark` | `injokim` | `jaehyeong` |",
         "| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
     ]
 
@@ -1872,8 +1872,8 @@ features:
         inj_link = r_map.get("injokim") or r_map.get("kiminjo") or "-"
         contrib_lines.append(
             f"| **Chapter 0{ch}**<br/><small>{meta['title']}</small> "
-            f"| [📘 본문 읽기](/ch0{ch}/) "
-            f"| [🧭 요약/연습](/ch0{ch}/guide) "
+            f"| [📘 심화 본문](/ch0{ch}/) "
+            f"| [⚡ 15분 압축](/ch0{ch}/guide) "
             f"| {r_map.get('mbsong', '-')} "
             f"| {r_map.get('singon', '-')} "
             f"| {r_map.get('junpark', '-')} "
@@ -1904,10 +1904,18 @@ features:
         main_processed = inject_active_learning(ch, main_processed)
         main_processed = normalize_to_finished_book(main_processed)
 
-        # Place Lead Author Byline right under the top `# Title`
+        digest_file = BOOK_DIR / "scripts" / "digests" / f"ch0{ch}_digest.md"
+        dual_track_bar = (
+            '<div class="t2s-dual-track-shortcut">\n'
+            '  <span>⏱️ <strong>듀얼 트랙 독서 모드:</strong> 방대한 본문 정독 전, 15분 만에 전체 수식·비교표·핵심 코드를 먼저 훑어보고 싶다면?</span>\n'
+            '  <a href="./guide">⚡ 15분 핵심 압축 교안 (Core Digest) 열기 →</a>\n'
+            '</div>\n'
+        ) if digest_file.exists() else ""
+
+        # Place Lead Author Byline (+ Dual-Track Shortcut) right under the top `# Title`
         main_processed = re.sub(
             r'^(#\s+[^\n]+\n)',
-            lambda m: m.group(1) + "\n" + author_byline_main + "\n",
+            lambda m: m.group(1) + "\n" + author_byline_main + ("\n" + dual_track_bar if dual_track_bar else "") + "\n",
             main_processed.lstrip(),
             count=1
         )
@@ -1946,22 +1954,32 @@ features:
 
         (ch_dir / "index.md").write_text(main_final, encoding="utf-8")
 
-        # 4b. Chapter Summary & Calculation Exercises (docs/ch0X/guide.md)
-        guide_parts = [nav_bar, author_byline_guide]
-        if meta["guide_src"] and meta["guide_src"].exists():
-            g_raw = meta["guide_src"].read_text(encoding="utf-8")
-            if g_raw.lstrip().startswith("## "):
-                g_raw = g_raw.lstrip()[1:]
-            g_clean = sanitize_markdown_for_vitepress(g_raw, ch_num=ch)
-            guide_parts.append(normalize_to_finished_book(g_clean))
+        # 4b. Core Digest / Chapter Summary & Calculation Exercises (docs/ch0X/guide.md)
+        if digest_file.exists():
+            d_raw = sanitize_markdown_for_vitepress(digest_file.read_text(encoding="utf-8").lstrip(), ch_num=ch)
+            d_with_byline = re.sub(
+                r'^(#\s+[^\n]+\n)',
+                lambda m: m.group(1) + "\n" + author_byline_guide + "\n",
+                d_raw,
+                count=1
+            )
+            (ch_dir / "guide.md").write_text(nav_bar + d_with_byline, encoding="utf-8")
+        else:
+            guide_parts = [nav_bar, author_byline_guide]
+            if meta["guide_src"] and meta["guide_src"].exists():
+                g_raw = meta["guide_src"].read_text(encoding="utf-8")
+                if g_raw.lstrip().startswith("## "):
+                    g_raw = g_raw.lstrip()[1:]
+                g_clean = sanitize_markdown_for_vitepress(g_raw, ch_num=ch)
+                guide_parts.append(normalize_to_finished_book(g_clean))
 
-        if meta["ref_src"] and meta["ref_src"].exists():
-            r_raw = meta["ref_src"].read_text(encoding="utf-8")
-            r_raw = wrap_solutions_in_details(r_raw)
-            r_clean = sanitize_markdown_for_vitepress(r_raw, ch_num=ch)
-            guide_parts.append("\n\n---\n\n" + normalize_to_finished_book(r_clean))
+            if meta["ref_src"] and meta["ref_src"].exists():
+                r_raw = meta["ref_src"].read_text(encoding="utf-8")
+                r_raw = wrap_solutions_in_details(r_raw)
+                r_clean = sanitize_markdown_for_vitepress(r_raw, ch_num=ch)
+                guide_parts.append("\n\n---\n\n" + normalize_to_finished_book(r_clean))
 
-        (ch_dir / "guide.md").write_text("\n".join(guide_parts), encoding="utf-8")
+            (ch_dir / "guide.md").write_text("\n".join(guide_parts), encoding="utf-8")
 
         # 4c. Researcher Deep-Dive Notes (docs/ch0X/researchers/<id>.md)
         for r in meta["researchers"]:

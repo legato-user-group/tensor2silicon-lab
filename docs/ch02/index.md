@@ -16,6 +16,11 @@
   <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
 </div>
 
+<div class="t2s-dual-track-shortcut">
+  <span>⏱️ <strong>듀얼 트랙 독서 모드:</strong> 방대한 본문 정독 전, 15분 만에 전체 수식·비교표·핵심 코드를 먼저 훑어보고 싶다면?</span>
+  <a href="./guide">⚡ 15분 핵심 압축 교안 (Core Digest) 열기 →</a>
+</div>
+
 
 > **핵심 질문**  
 > 같은 연산인데 왜 어떤 커널은 빠르고 어떤 커널은 느릴까? 계산하는 시간과 데이터를 옮기는 시간을 어떻게 구분할 수 있을까?

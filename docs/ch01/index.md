@@ -16,6 +16,11 @@
   <a class="t2s-author-gh-btn" href="https://github.com/yblee110" target="_blank" rel="noopener">GitHub @yblee110 ↗</a>
 </div>
 
+<div class="t2s-dual-track-shortcut">
+  <span>⏱️ <strong>듀얼 트랙 독서 모드:</strong> 방대한 본문 정독 전, 15분 만에 전체 수식·비교표·핵심 코드를 먼저 훑어보고 싶다면?</span>
+  <a href="./guide">⚡ 15분 핵심 압축 교안 (Core Digest) 열기 →</a>
+</div>
+
 
 > **핵심 질문**  
 > 모델의 연산 하나가 가속기에서 실행되기까지 어떤 단계를 거치며, 각 단계는 무엇을 담당할까?

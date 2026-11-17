@@ -49,16 +49,16 @@ function isActive(targetPath: string) {
           class="t2s-tab"
           :class="{ active: isActive(`${chapterPrefix}/`) || isActive(`${chapterPrefix}/index`) }"
         >
-          <span>📘 본문 교안</span>
+          <span>📘 전체 심화 본문</span>
           <span class="pill-sub">집필: 이영빈</span>
         </a>
         <a
           :href="withBase(`${chapterPrefix}/guide`)"
-          class="t2s-tab"
+          class="t2s-tab digest-tab"
           :class="{ active: isActive(`${chapterPrefix}/guide`) }"
         >
-          <span>🧭 단원 요약 &amp; 연습</span>
-          <span class="pill-sub">yblee</span>
+          <span>⚡ 15분 핵심 압축 교안</span>
+          <span class="pill-sub">Core Digest</span>
         </a>
       </div>
       <div class="t2s-tab-divider"></div>
